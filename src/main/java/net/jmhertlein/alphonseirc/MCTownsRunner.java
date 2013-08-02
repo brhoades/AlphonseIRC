@@ -14,8 +14,9 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-package net.jmhertlein.alfredirc;
+package net.jmhertlein.alphonseirc;
 
+import java.io.Console;
 import java.io.IOException;
 import java.util.LinkedList;
 import java.util.List;
@@ -29,18 +30,21 @@ import org.jibble.pircbot.IrcException;
  * @author Joshua Michael Hertlein <jmhertlein@gmail.com>
  */
 public class MCTownsRunner {
+
     public static void main(String[] args) {
         Scanner scan = new Scanner(System.in);
-        
         List<String> owners = new LinkedList<>();
+
         owners.add("Everdras");
         owners.add("Everdras_");
-        
+
         //get nick's password
-        System.out.print("Password: ");
-        String password = scan.nextLine();
-        
-        AlfredBot bot = new AlfredBot(owners, "Alphonse", password);
+
+        Console console = System.console();
+        console.printf("Password: ");
+        char[] passwordArray = console.readPassword();
+
+        AlphonseBot bot = new AlphonseBot(owners, "Alphonse", new String(passwordArray));
         bot.setMessageDelay(500);
         try {
             System.out.println("Connecting to esper.net.");
@@ -51,15 +55,31 @@ public class MCTownsRunner {
         } catch (IOException | IrcException ex) {
             Logger.getLogger(MCTownsRunner.class.getName()).log(Level.SEVERE, null, ex);
         }
-        
+
         boolean quit = false;
-        while(!quit) {
-            if(scan.nextLine().isEmpty()) {
-                System.out.println("Quitting.");
-                bot.disconnect();
-                bot.dispose();
-                quit = true;
-                System.out.println("Quit'd.");
+        while (!quit) {
+            String curLine = scan.nextLine();
+
+            switch (curLine) {
+                case "exit":
+                    System.out.println("Quitting.");
+                    bot.disconnect();
+                    bot.dispose();
+                    quit = true;
+                    System.out.println("Quit'd.");
+                    break;
+                case "msg":
+                    Scanner lineScan = new Scanner(curLine);
+                    lineScan.next(); //eat the "msg"
+                    try {
+                        bot.sendMessage(lineScan.next(), lineScan.nextLine());
+                    } catch (Exception e) {
+                        System.err.println(e.getClass().toString());
+                        System.err.println("Not enough args");
+                    }
+                    break;
+                default:
+                    System.out.println("Invalid command.");
             }
         }
     }

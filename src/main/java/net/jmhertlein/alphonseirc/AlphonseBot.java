@@ -14,7 +14,7 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-package net.jmhertlein.alfredirc;
+package net.jmhertlein.alphonseirc;
 
 import java.util.HashMap;
 import java.util.List;
@@ -26,13 +26,13 @@ import org.jibble.pircbot.User;
  *
  * @author Joshua Michael Hertlein <jmhertlein@gmail.com>
  */
-public class AlfredBot extends PircBot {
+public class AlphonseBot extends PircBot {
     private List<String> ownerNicks;
     private String nickPassword, nick;
     private Map<String, ConversationState> conversationStates;
     
 
-    public AlfredBot(List<String> ownerNicks, String nick, String nickPassword) {
+    public AlphonseBot(List<String> ownerNicks, String nick, String nickPassword) {
         this.ownerNicks = ownerNicks;
         this.nickPassword = nickPassword;
         this.nick = nick;
@@ -55,7 +55,8 @@ public class AlfredBot extends PircBot {
 
     @Override
     protected void onConnect() {
-        this.sendMessage("NickServ", String.format("identify %s", nickPassword));
+        this.identify(nickPassword);
+        System.out.println("Messaged NickServ");
     }
 
     private static enum ConversationState {
@@ -84,6 +85,13 @@ public class AlfredBot extends PircBot {
                 break;
         }
     }
+
+    @Override
+    protected void onPrivateMessage(String sender, String login, String hostname, String message) {
+        System.out.printf("[PM][%s (Login: %s)]: %s\n", sender, login, message);
+    }
+    
+    
     
     private void printInitialGreeting(String channel, String targetNick) {
         sendMessage(channel, "Welcome to the MCTowns IRC channel, " + targetNick + ". I'm Everdras' trusty IRC bot. How can I help you?");
@@ -95,18 +103,23 @@ public class AlfredBot extends PircBot {
     
     private void onMainMenuSelectionMade(String sender, String channel, String message) {
         if(message.contains("1")) {
-            sendMessage(channel, "If you have a question, let me see what I can do about getting ahold of Everdras for you...");
+            sendMessage(channel, "If you have a question, let me see what I can do...");
             if(isEverdrasInChannel(channel))
                 sendMessage(channel, "Pinging Everdras, and Everdras_...");
             else
-                sendMessage(channel, "Everdras isn't in the channel, so I'll skip pinging them.");
+                sendMessage(channel, "Everdras isn't in the channel, so I'll skip pinging him.");
             
-            sendMessage(channel, "Sending them both PM's...");
+            sendMessage(channel, "Sending Everdras a PM...");
+            
             sendMessage("Everdras", String.format("%s has a question for you in %s. Pay attention.", sender, channel));
             sendMessage("Everdras_", String.format("%s has a question for you in %s. Pay attention.", sender, channel));
             
-            sendMessage(channel, "If Everdras doesn't reply, you should go to http://dev.bukkit.org/home/send-private-message/?to=Everdras and send him a PM, or you should email him at everdras@gmail.com");
-            sendMessage(channel, "He always responds to those. Regardless, I hope I could be helpful to you!");
+            sendMessage(channel, "If Everdras is at his computer, he should respond shortly. If he doesn't reply, you should try these things:");
+            sendMessage(channel, "1) Check the MCTowns wiki:  https://github.com/jmhertlein/MCTowns/wiki");
+            sendMessage(channel, "2) Send Everdras a PM on BukkitDev: http://dev.bukkit.org/home/send-private-message/?to=Everdras");
+            sendMessage(channel, "3) Email Everdras at everdras@gmail.com");
+            sendMessage(channel, "I urge you to check out the wiki, it's useful. I hope I was able to help you!");
+            
             conversationStates.put(sender, ConversationState.IDLE);
         }
         else if(message.contains("2")) {
