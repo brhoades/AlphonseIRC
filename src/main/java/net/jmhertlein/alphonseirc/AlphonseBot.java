@@ -31,10 +31,10 @@ import org.jibble.pircbot.User;
  * @author Joshua Michael Hertlein <jmhertlein@gmail.com>
  */
 public class AlphonseBot extends PircBot {
+
     private List<String> ownerNicks;
     private String nickPassword, nick;
     private Map<String, ConversationState> conversationStates;
-    
 
     public AlphonseBot(List<String> ownerNicks, String nick, String nickPassword) {
         this.ownerNicks = ownerNicks;
@@ -43,12 +43,13 @@ public class AlphonseBot extends PircBot {
         conversationStates = new HashMap<>();
         setName(nick);
     }
-    
+
     @Override
     protected void onJoin(String channel, String sender, String login, String hostname) {
-        if(sender.equals(nick))
+        if (sender.equals(nick)) {
             return;
-        if(ownerNicks.contains(sender)) {
+        }
+        if (ownerNicks.contains(sender)) {
             sendMessage(channel, "Welcome back, " + sender + "!");
             return;
         }
@@ -64,6 +65,7 @@ public class AlphonseBot extends PircBot {
     }
 
     private static enum ConversationState {
+
         WAITING_FOR_MAIN_MENU_SELECTION,
         IDLE;
     }
@@ -73,14 +75,15 @@ public class AlphonseBot extends PircBot {
         //System.out.printf("Channel: %s, Sender: %s, Message: %s\n", channel, sender, message);
         ConversationState state = conversationStates.get(sender);
         //System.out.println("State:" + (state == null ? "null" : state.name()));
-        if(message.contains(nick)) {
+        if (message.contains(nick)) {
             printInitialGreeting(channel, sender);
             conversationStates.put(sender, ConversationState.WAITING_FOR_MAIN_MENU_SELECTION);
         }
-        if(state == null)
+        if (state == null) {
             return;
-        
-        switch(state) {
+        }
+
+        switch (state) {
             case WAITING_FOR_MAIN_MENU_SELECTION:
                 onMainMenuSelectionMade(sender, channel, message);
                 break;
@@ -94,9 +97,7 @@ public class AlphonseBot extends PircBot {
     protected void onPrivateMessage(String sender, String login, String hostname, String message) {
         System.out.printf("[PM][%s (Login: %s)]: %s\n", sender, login, message);
     }
-    
-    
-    
+
     private void printInitialGreeting(String channel, String targetNick) {
         sendMessage(channel, "Welcome to the MCTowns IRC channel, " + targetNick + ". I'm Everdras' trusty IRC bot. How can I help you?");
         sendMessage(channel, "Just say the number of the choice you wish to select from this menu below:");
@@ -104,29 +105,29 @@ public class AlphonseBot extends PircBot {
         sendMessage(channel, "2) I found a bug, and want to report it.");
         sendMessage(channel, "3) I'm just here to hang out.");
     }
-    
+
     private void onMainMenuSelectionMade(String sender, String channel, String message) {
-        if(message.contains("1")) {
+        if (message.contains("1")) {
             sendMessage(channel, "If you have a question, let me see what I can do...");
-            if(isEverdrasInChannel(channel))
+            if (isEverdrasInChannel(channel)) {
                 sendMessage(channel, "Pinging Everdras, and Everdras_...");
-            else
+            } else {
                 sendMessage(channel, "Everdras isn't in the channel, so I'll skip pinging him.");
-            
+            }
+
             sendMessage(channel, "Sending Everdras a PM...");
-            
+
             sendMessage("Everdras", String.format("%s has a question for you in %s. Pay attention.", sender, channel));
             sendMessage("Everdras_", String.format("%s has a question for you in %s. Pay attention.", sender, channel));
-            
+
             sendMessage(channel, "If Everdras is at his computer, he should respond shortly. If he doesn't reply, you should try these things:");
             sendMessage(channel, "1) Check the MCTowns wiki:  https://github.com/jmhertlein/MCTowns/wiki");
             sendMessage(channel, "2) Send Everdras a PM on BukkitDev: http://dev.bukkit.org/home/send-private-message/?to=Everdras");
             sendMessage(channel, "3) Email Everdras at everdras@gmail.com");
             sendMessage(channel, "I urge you to check out the wiki, it's useful. I hope I was able to help you!");
-            
+
             conversationStates.put(sender, ConversationState.IDLE);
-        }
-        else if(message.contains("2")) {
+        } else if (message.contains("2")) {
             sendMessage(channel, "Oh, you found a bug! I'm sorry about that. Everdras would love to chat with you about it,"
                     + "but the first thing you should do is head over to https://github.com/jmhertlein/MCTowns/issues and open a bug report.\n"
                     + "This is really important, because it makes sure your issue gets noticed and keeps all the discussion on it in one place.");
@@ -134,19 +135,20 @@ public class AlphonseBot extends PircBot {
             sendMessage("Everdras", sender + " found a bug.");
             sendMessage("Everdras_", sender + " found a bug.");
             conversationStates.put(sender, ConversationState.IDLE);
-        } else if(message.contains("3")) {
+        } else if (message.contains("3")) {
             sendMessage(channel, "Ah, you're just here to hang out. My apologies, enjoy!");
             conversationStates.put(sender, ConversationState.IDLE);
-        }
-        else {
+        } else {
             sendMessage(channel, "I'm sorry, I don't understand your message: \"" + message + "\". Please enter a valid number: 1, 2, or 3.");
         }
     }
-    
+
     private boolean isEverdrasInChannel(String channel) {
-        for(User name : getUsers(channel))
-            if(name.getNick().equals("Everdras") || name.getNick().equals("Everdras_"))
+        for (User name : getUsers(channel)) {
+            if (name.getNick().equals("Everdras") || name.getNick().equals("Everdras_")) {
                 return true;
+            }
+        }
         return false;
     }
 
@@ -154,18 +156,22 @@ public class AlphonseBot extends PircBot {
     protected void onDisconnect() {
         System.err.println("I got disconnected!");
         System.out.println("I got disconnected!");
-        try {
-            System.out.println("Trying to reconnect...");
-            connect("irc.esper.net");
-            System.out.println("Reconnected.");
-        } catch (IOException | IrcException ex) {
-            System.err.println("Error reconnecting to irc.esper.net.");
+
+        int attempt = 0;
+        while (!isConnected()) {
+            try {
+                System.out.printf("Trying to reconnect... (Attempt %s)\n", attempt);
+                connect("irc.esper.net");
+                System.out.println("Reconnected.");
+            } catch (IOException | IrcException ex) {
+                System.err.println("Error reconnecting to irc.esper.net.");
+            }
         }
         
         System.out.println("Rejoining MCTowns channel.");
         joinChannel("#mctowns");
+
         System.out.println("Rejoined #mctowns");
     }
-    
-    
+
 }
