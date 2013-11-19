@@ -16,9 +16,13 @@
  */
 package net.jmhertlein.alphonseirc;
 
+import java.io.IOException;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.logging.Level;
+import java.util.logging.Logger;
+import org.jibble.pircbot.IrcException;
 import org.jibble.pircbot.PircBot;
 import org.jibble.pircbot.User;
 
@@ -145,4 +149,23 @@ public class AlphonseBot extends PircBot {
                 return true;
         return false;
     }
+
+    @Override
+    protected void onDisconnect() {
+        System.err.println("I got disconnected!");
+        System.out.println("I got disconnected!");
+        try {
+            System.out.println("Trying to reconnect...");
+            connect("irc.esper.net");
+            System.out.println("Reconnected.");
+        } catch (IOException | IrcException ex) {
+            System.err.println("Error reconnecting to irc.esper.net.");
+        }
+        
+        System.out.println("Rejoining MCTowns channel.");
+        joinChannel("#mctowns");
+        System.out.println("Rejoined #mctowns");
+    }
+    
+    
 }
