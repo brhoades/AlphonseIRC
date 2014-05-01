@@ -29,7 +29,7 @@ import org.jibble.pircbot.IrcException;
  *
  * @author Joshua Michael Hertlein <jmhertlein@gmail.com>
  */
-public class MCTownsRunner {
+public class MSTDeskEngRunner {
 
     public static void main(String[] args) {
         Scanner scan = new Scanner(System.in);
@@ -49,11 +49,11 @@ public class MCTownsRunner {
         try {
             System.out.println("Connecting to esper.net.");
             bot.connect("irc.esper.net");
-            System.out.println("Joining MCTowns channel.");
-            bot.joinChannel("#mctowns");
+            System.out.println("Joining #mstdeskeng channel.");
+            bot.joinChannel("#mstdeskeng");
             System.out.println("Done.");
         } catch (IOException | IrcException ex) {
-            Logger.getLogger(MCTownsRunner.class.getName()).log(Level.SEVERE, null, ex);
+            Logger.getLogger(MSTDeskEngRunner.class.getName()).log(Level.SEVERE, null, ex);
         }
 
         boolean quit = false;

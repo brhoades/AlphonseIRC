@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013 Joshua Michael Hertlein <jmhertlein@gmail.com>
+ * Copyright (C) 2013-14 Joshua Michael Hertlein <jmhertlein@gmail.com>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -34,13 +34,11 @@ public class AlphonseBot extends PircBot {
 
     private List<String> ownerNicks;
     private String nickPassword, nick;
-    private Map<String, ConversationState> conversationStates;
 
     public AlphonseBot(List<String> ownerNicks, String nick, String nickPassword) {
         this.ownerNicks = ownerNicks;
         this.nickPassword = nickPassword;
         this.nick = nick;
-        conversationStates = new HashMap<>();
         setName(nick);
     }
 
@@ -49,13 +47,10 @@ public class AlphonseBot extends PircBot {
         if (sender.equals(nick)) {
             return;
         }
-        if (ownerNicks.contains(sender)) {
-            sendMessage(channel, "Welcome back, " + sender + "!");
-            return;
-        }
+
+        voice(channel, sender);
+	System.out.println("Voiced " + sender);
         System.out.println(sender + " joined.");
-        printInitialGreeting(channel, sender);
-        conversationStates.put(sender, ConversationState.WAITING_FOR_MAIN_MENU_SELECTION);
     }
 
     @Override
@@ -64,32 +59,19 @@ public class AlphonseBot extends PircBot {
         System.out.println("Messaged NickServ");
     }
 
-    private static enum ConversationState {
-
-        WAITING_FOR_MAIN_MENU_SELECTION,
-        IDLE;
-    }
-
     @Override
     protected void onMessage(String channel, String sender, String login, String hostname, String message) {
-        //System.out.printf("Channel: %s, Sender: %s, Message: %s\n", channel, sender, message);
-        ConversationState state = conversationStates.get(sender);
-        //System.out.println("State:" + (state == null ? "null" : state.name()));
-        if (message.contains(nick)) {
-            printInitialGreeting(channel, sender);
-            conversationStates.put(sender, ConversationState.WAITING_FOR_MAIN_MENU_SELECTION);
-        }
-        if (state == null) {
-            return;
+        message = message.toLowerCase();
+        if(message.contains("voldemort")) {
+            sendMessage(channel, "DON'T SAY HIS NAME!");
+        } else if(message.matches("(^|.*\\W+)rms(\\W+.*|$)")) {
+            sendMessage(channel, "May He live forever.");
+        } else if(message.matches("(^|.*\\W+)(java|jvm)(\\W+.*|$)")) {
+            sendMessage(channel, "brodes: JAVA DETECTED");
         }
 
-        switch (state) {
-            case WAITING_FOR_MAIN_MENU_SELECTION:
-                onMainMenuSelectionMade(sender, channel, message);
-                break;
-            case IDLE:
-            default:
-                break;
+        if(message.contains(nick.toLowerCase()) && message.matches(".*\\W+hi(\\W+.*|$)")) {
+            sendMessage(channel, String.format("%s: %s", sender, "What you're referring to as \"Hi\" is in fact GNU/Hi, or as I've recently taken to calling it, GNU+Hi."));
         }
     }
 
@@ -98,58 +80,16 @@ public class AlphonseBot extends PircBot {
         System.out.printf("[PM][%s (Login: %s)]: %s\n", sender, login, message);
     }
 
-    private void printInitialGreeting(String channel, String targetNick) {
-        sendMessage(channel, "Welcome to the MCTowns IRC channel, " + targetNick + ". I'm Everdras' trusty IRC bot. How can I help you?");
-        sendMessage(channel, "Just say the number of the choice you wish to select from this menu below:");
-        sendMessage(channel, "1) I have a question.");
-        sendMessage(channel, "2) I found a bug, and want to report it.");
-        sendMessage(channel, "3) I'm just here to hang out.");
+    @Override
+    protected void onPart(String channel, String sender, String login, String hostname) {
+        System.out.println(sender + " parted.");
     }
 
-    private void onMainMenuSelectionMade(String sender, String channel, String message) {
-        if (message.contains("1")) {
-            sendMessage(channel, "If you have a question, let me see what I can do...");
-            if (isEverdrasInChannel(channel)) {
-                sendMessage(channel, "Pinging Everdras, and Everdras_...");
-            } else {
-                sendMessage(channel, "Everdras isn't in the channel, so I'll skip pinging him.");
-            }
-
-            sendMessage(channel, "Sending Everdras a PM...");
-
-            sendMessage("Everdras", String.format("%s has a question for you in %s. Pay attention.", sender, channel));
-            sendMessage("Everdras_", String.format("%s has a question for you in %s. Pay attention.", sender, channel));
-
-            sendMessage(channel, "If Everdras is at his computer, he should respond shortly. If he doesn't reply, you should try these things:");
-            sendMessage(channel, "1) Check the MCTowns wiki:  https://github.com/jmhertlein/MCTowns/wiki");
-            sendMessage(channel, "2) Send Everdras a PM on BukkitDev: http://dev.bukkit.org/home/send-private-message/?to=Everdras");
-            sendMessage(channel, "3) Email Everdras at everdras@gmail.com");
-            sendMessage(channel, "I urge you to check out the wiki, it's useful. I hope I was able to help you!");
-
-            conversationStates.put(sender, ConversationState.IDLE);
-        } else if (message.contains("2")) {
-            sendMessage(channel, "Oh, you found a bug! I'm sorry about that. Everdras would love to chat with you about it,"
-                    + "but the first thing you should do is head over to https://github.com/jmhertlein/MCTowns/issues and open a bug report.\n"
-                    + "This is really important, because it makes sure your issue gets noticed and keeps all the discussion on it in one place.");
-            sendMessage(channel, "I've just pinged Everdras, so if he's available he should be responding soon. I hope I was able to be of some help!");
-            sendMessage("Everdras", sender + " found a bug.");
-            sendMessage("Everdras_", sender + " found a bug.");
-            conversationStates.put(sender, ConversationState.IDLE);
-        } else if (message.contains("3")) {
-            sendMessage(channel, "Ah, you're just here to hang out. My apologies, enjoy!");
-            conversationStates.put(sender, ConversationState.IDLE);
-        } else {
-            sendMessage(channel, "I'm sorry, I don't understand your message: \"" + message + "\". Please enter a valid number: 1, 2, or 3.");
+    @Override
+    protected void onKick(String channel, String kickerNick, String kickerLogin, String kickerHostname, String recipientNick, String reason) {
+        if(recipientNick.equals(nick)) {
+            joinChannel("#mstdeskeng");
         }
-    }
-
-    private boolean isEverdrasInChannel(String channel) {
-        for (User name : getUsers(channel)) {
-            if (name.getNick().equals("Everdras") || name.getNick().equals("Everdras_")) {
-                return true;
-            }
-        }
-        return false;
     }
 
     @Override
@@ -168,10 +108,10 @@ public class AlphonseBot extends PircBot {
             }
         }
         
-        System.out.println("Rejoining MCTowns channel.");
-        joinChannel("#mctowns");
+        System.out.println("Rejoining channel...");
+        joinChannel("#mstdeskeng");
 
-        System.out.println("Rejoined #mctowns");
+        System.out.println("Rejoined #mstdeskeng");
     }
 
 }
