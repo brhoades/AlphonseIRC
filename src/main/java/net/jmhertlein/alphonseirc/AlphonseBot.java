@@ -95,10 +95,8 @@ public class AlphonseBot extends PircBot {
                 int n = gen.nextInt(100);
                 if (n < 3)
                     interject(message, channel);
-                else if (n < 90)
-                    sendMessage(channel, "hashcode() of \"" + message + "\": " + message.hashCode());
                 else
-                    sendXKCD(message, channel, sender);
+                    sendMessage(channel, "hashcode() of \"" + message.substring(message.indexOf(":")+2) + "\": " + message.substring(message.indexOf(":")+2).hashCode());
             }
     }
 
@@ -107,7 +105,14 @@ public class AlphonseBot extends PircBot {
             this.maxXKCD = MSTDeskEngRunner.getMaxXKCD();
             MSTDeskEngRunner.writeConfig();
         }
-        if (message.toLowerCase().contains("please"))
+
+        boolean accept = false;
+        for(String s : message.toLowerCase().split(" ")) {
+            if(s.hashCode() == 93747762) //magic word
+                accept = true;
+        }
+
+        if (message.toLowerCase().contains("please") || accept)
             sendMessage(channel, sender + ": I found an XKCD for you: https://xkcd.com/" + (1 + gen.nextInt(maxXKCD)));
         else
             sendMessage(channel, sender + ": Say \"please\"!");
