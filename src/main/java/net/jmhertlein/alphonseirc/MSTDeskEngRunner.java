@@ -17,41 +17,51 @@
 package net.jmhertlein.alphonseirc;
 
 import java.io.Console;
+import java.io.File;
+import java.io.FileInputStream;
 import java.io.IOException;
-import java.util.LinkedList;
+import java.io.PrintWriter;
+import java.net.MalformedURLException;
+import java.net.URL;
+import java.nio.file.Paths;
+import java.nio.file.attribute.PosixFilePermissions;
+import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Scanner;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import net.jmhertlein.core.io.Files;
 import org.jibble.pircbot.IrcException;
+import org.json.JSONObject;
+import org.yaml.snakeyaml.Yaml;
 
 /**
  *
  * @author Joshua Michael Hertlein <jmhertlein@gmail.com>
  */
 public class MSTDeskEngRunner {
+    private static final String XKCD_URL = "https://xkcd.com/info.0.json";
+    private static final File CONFIG_FILE = Files.join(System.getProperty("user.home"), ".config", "alphonseirc", "config.yml");
+    private static String nick, pass, server;
+    private static List<String> channels;
+    private static int maxXKCD;
+    private static long cachedUTC;
+
+    public static int getMaxXKCD() {
+        return maxXKCD;
+    }
 
     public static void main(String[] args) {
         Scanner scan = new Scanner(System.in);
-        List<String> owners = new LinkedList<>();
 
-        owners.add("Everdras");
-        owners.add("Everdras_");
+        loadConfig();
 
-        //get nick's password
-
-        Console console = System.console();
-        console.printf("Password: ");
-        char[] passwordArray = console.readPassword();
-
-        AlphonseBot bot = new AlphonseBot(owners, "Alphonse", new String(passwordArray));
+        AlphonseBot bot = new AlphonseBot(nick, pass, server, channels, maxXKCD);
         bot.setMessageDelay(500);
         try {
-            System.out.println("Connecting to esper.net.");
-            bot.connect("irc.esper.net");
-            System.out.println("Joining #mstdeskeng channel.");
-            bot.joinChannel("#mstdeskeng");
-            System.out.println("Done.");
+            bot.startConnection();
         } catch (IOException | IrcException ex) {
             Logger.getLogger(MSTDeskEngRunner.class.getName()).log(Level.SEVERE, null, ex);
         }
@@ -63,14 +73,14 @@ public class MSTDeskEngRunner {
             switch (curLine) {
                 case "exit":
                     System.out.println("Quitting.");
+                    bot.onPreQuit();
                     bot.disconnect();
                     bot.dispose();
                     quit = true;
                     System.out.println("Quit'd.");
                     break;
                 case "msg":
-                    Scanner lineScan = new Scanner(curLine);
-                    lineScan.next(); //eat the "msg"
+                    Scanner lineScan = new Scanner(scan.nextLine());
                     try {
                         bot.sendMessage(lineScan.next(), lineScan.nextLine());
                     } catch (Exception e) {
@@ -82,5 +92,113 @@ public class MSTDeskEngRunner {
                     System.out.println("Invalid command.");
             }
         }
+    }
+
+    private static void loadConfig() {
+        boolean read = false;
+        File f = CONFIG_FILE;
+        if (!f.exists()) {
+            read = true;
+            try {
+                f.getParentFile().mkdirs();
+                f.createNewFile();
+                java.nio.file.Files.setPosixFilePermissions(Paths.get(f.toURI()), PosixFilePermissions.fromString("rw-------"));
+            } catch (IOException ex) {
+                Logger.getLogger(MSTDeskEngRunner.class.getName()).log(Level.SEVERE, null, ex);
+                System.err.println("Error writing empty config.yml!");
+            }
+        }
+
+        Map<String, Object> config;
+
+        if (read) {
+            Console console = System.console();
+            console.printf("Nick: \n->");
+            nick = console.readLine();
+            console.printf("\nPassword: \n-|");
+            pass = new String(console.readPassword());
+            console.printf("\nServer: \n->");
+            server = console.readLine();
+            console.printf("\nChannels: (ex: #java,#linux,#gnome)\n->");
+            channels = Arrays.asList(console.readLine().split(","));
+            System.out.println("Fetching max XKCD...");
+            maxXKCD = fetchMaxXKCD();
+            System.out.println("Fetched.");
+            cachedUTC = System.currentTimeMillis();
+
+            writeConfig();
+            System.out.println("Wrote config to file: " + CONFIG_FILE.getAbsolutePath());
+
+        } else {
+            try (FileInputStream fis = new FileInputStream(f)) {
+                Yaml y = new Yaml();
+                config = y.loadAs(fis, Map.class);
+            } catch (IOException ex) {
+                Logger.getLogger(MSTDeskEngRunner.class.getName()).log(Level.SEVERE, null, ex);
+                System.err.println("Error parsing config!");
+                return;
+            }
+
+            nick = (String) config.get("nick");
+            pass = (String) config.get("password");
+            server = (String) config.get("server");
+            channels = (List<String>) config.get("channels");
+            maxXKCD = (Integer) config.get("cachedMaxXKCD");
+            cachedUTC = (Long) config.get("cachedUTC");
+            if(checkXKCDUpdate())
+                writeConfig();
+            else
+                System.out.println("Loaded cached XKCD.");
+
+        }
+    }
+
+    public static boolean checkXKCDUpdate() {
+        if((System.currentTimeMillis() - cachedUTC*1000) > (2*24*60*60*1000)) { // 2 days
+            maxXKCD = fetchMaxXKCD();
+            cachedUTC = System.currentTimeMillis();
+            return true;
+        }
+        return false;
+    }
+
+    public static void writeConfig() {
+        Map<String, Object> m = new HashMap<>();
+        m.put("nick", nick);
+        m.put("password", pass);
+        m.put("server", server);
+        m.put("channels", channels);
+        m.put("cachedMaxXKCD", maxXKCD);
+        m.put("cachedUTC", cachedUTC);
+
+        Yaml yaml = new Yaml();
+        String yamlOutput = yaml.dump(m);
+        try(PrintWriter pw = new PrintWriter(CONFIG_FILE)){
+            pw.print(yamlOutput);
+        } catch (IOException ex) {
+            Logger.getLogger(MSTDeskEngRunner.class.getName()).log(Level.SEVERE, null, ex);
+        }
+    }
+
+
+    private static int fetchMaxXKCD() {
+        URL xkcdURL;
+        try {
+            xkcdURL = new URL(XKCD_URL);
+        } catch (MalformedURLException ex) {
+            Logger.getLogger(AlphonseBot.class.getName()).log(Level.SEVERE, null, ex);
+            return 0;
+        }
+
+        JSONObject json;
+        try (Scanner scan = new Scanner(xkcdURL.openStream())) {
+            scan.useDelimiter("\\A");
+            json = new JSONObject(scan.next());
+        } catch (IOException ex) {
+            Logger.getLogger(AlphonseBot.class.getName()).log(Level.SEVERE, null, ex);
+            return 0;
+        }
+
+        return json.getInt("num");
     }
 }

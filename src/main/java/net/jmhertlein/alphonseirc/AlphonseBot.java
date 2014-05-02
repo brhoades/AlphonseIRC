@@ -16,15 +16,25 @@
  */
 package net.jmhertlein.alphonseirc;
 
+import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.util.HashMap;
+import java.io.InputStream;
+import java.net.MalformedURLException;
+import java.net.URL;
+import java.util.ArrayList;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.Random;
+import java.util.Scanner;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import net.jmhertlein.core.io.LFSeparatedFile;
 import org.jibble.pircbot.IrcException;
 import org.jibble.pircbot.PircBot;
-import org.jibble.pircbot.User;
+import org.json.JSONObject;
+import org.yaml.snakeyaml.Yaml;
 
 /**
  *
@@ -32,46 +42,87 @@ import org.jibble.pircbot.User;
  */
 public class AlphonseBot extends PircBot {
 
-    private List<String> ownerNicks;
-    private String nickPassword, nick;
+    private static String INTERJECTION = "I'd just like to interject for moment. What you're refering to as $WORD, is in fact, GNU/$WORD, or as I've recently taken to calling it, GNU plus $WORD. $WORD is not a word unto itself, but rather another free component of a fully functioning GNU word made useful by the GNU letters, vowels and vital verbiage components comprising a full word as defined by POSIX. ";
+    private Random gen;
+    private String nick, pass, server;
+    private List<String> channels;
+    private int maxXKCD;
 
-    public AlphonseBot(List<String> ownerNicks, String nick, String nickPassword) {
-        this.ownerNicks = ownerNicks;
-        this.nickPassword = nickPassword;
+    public AlphonseBot(String nick, String pass, String server, List<String> channels, int maxXKCD) {
+        this.pass = pass;
         this.nick = nick;
+        this.channels = channels;
+        this.server = server;
         setName(nick);
+
+        this.maxXKCD = maxXKCD;
+    }
+
+    public void startConnection() throws IOException, IrcException {
+        System.out.println("Joining " + server);
+        connect(server);
+        System.out.println("Joined " + server);
+        for (String chan : channels) {
+            System.out.println("Joining " + chan);
+            joinChannel(chan);
+            System.out.println("Joined " + chan);
+        }
+        gen = new Random();
     }
 
     @Override
     protected void onJoin(String channel, String sender, String login, String hostname) {
-        if (sender.equals(nick)) {
+        if (sender.equals(nick))
             return;
-        }
 
         voice(channel, sender);
-	System.out.println("Voiced " + sender);
+        System.out.println("Voiced " + sender);
         System.out.println(sender + " joined.");
     }
 
     @Override
     protected void onConnect() {
-        this.identify(nickPassword);
+        this.identify(pass);
         System.out.println("Messaged NickServ");
     }
 
     @Override
     protected void onMessage(String channel, String sender, String login, String hostname, String message) {
-        message = message.toLowerCase();
-        if(message.contains("voldemort")) {
-            sendMessage(channel, "DON'T SAY HIS NAME!");
-        } else if(message.matches("(^|.*\\W+)rms(\\W+.*|$)")) {
-            sendMessage(channel, "May He live forever.");
-        } else if(message.matches("(^|.*\\W+)(java|jvm)(\\W+.*|$)")) {
-            sendMessage(channel, "brodes: JAVA DETECTED");
-        }
+        if (message.toLowerCase().contains(nick.toLowerCase()))
+            if (message.toLowerCase().contains("xkcd"))
+                sendXKCD(message, channel, sender);
+            else {
+                int n = gen.nextInt(100);
+                if (n < 3)
+                    interject(message, channel);
+                else if (n < 90)
+                    sendMessage(channel, "hashcode() of \"" + message + "\": " + message.hashCode());
+                else
+                    sendXKCD(message, channel, sender);
+            }
+    }
 
-        if(message.contains(nick.toLowerCase()) && message.matches(".*\\W+hi(\\W+.*|$)")) {
-            sendMessage(channel, String.format("%s: %s", sender, "What you're referring to as \"Hi\" is in fact GNU/Hi, or as I've recently taken to calling it, GNU+Hi."));
+    private void sendXKCD(String message, String channel, String sender) {
+        if(MSTDeskEngRunner.checkXKCDUpdate()) {
+            this.maxXKCD = MSTDeskEngRunner.getMaxXKCD();
+            MSTDeskEngRunner.writeConfig();
+        }
+        if (message.toLowerCase().contains("please"))
+            sendMessage(channel, sender + ": I found an XKCD for you: https://xkcd.com/" + (1 + gen.nextInt(maxXKCD)));
+        else
+            sendMessage(channel, sender + ": Say \"please\"!");
+    }
+
+    private void interject(String message, String channel) {
+        String[] words = message.split(" ");
+        List<String> wordList = new ArrayList<>(words.length);
+        for (String w : words) {
+            if (!w.toLowerCase().contains(nick.toLowerCase()))
+                wordList.add(w);
+        }
+        if (wordList.size() >= 1) {
+            String word = wordList.get(gen.nextInt(wordList.size()));
+            sendMessage(channel, INTERJECTION.replace("$WORD", word));
         }
     }
 
@@ -87,8 +138,9 @@ public class AlphonseBot extends PircBot {
 
     @Override
     protected void onKick(String channel, String kickerNick, String kickerLogin, String kickerHostname, String recipientNick, String reason) {
-        if(recipientNick.equals(nick)) {
-            joinChannel("#mstdeskeng");
+        if (recipientNick.equals(nick)) {
+            System.out.println(kickerNick + " kicked me! Rejoining...");
+            joinChannel(channel);
         }
     }
 
@@ -101,17 +153,25 @@ public class AlphonseBot extends PircBot {
         while (!isConnected()) {
             try {
                 System.out.printf("Trying to reconnect... (Attempt %s)\n", attempt);
-                connect("irc.esper.net");
+                connect(server);
                 System.out.println("Reconnected.");
             } catch (IOException | IrcException ex) {
-                System.err.println("Error reconnecting to irc.esper.net.");
+                System.err.println("Error reconnecting to " + server);
             }
         }
-        
-        System.out.println("Rejoining channel...");
-        joinChannel("#mstdeskeng");
 
-        System.out.println("Rejoined #mstdeskeng");
+        System.out.println("Rejoining channels...");
+        for (String chan : channels) {
+            System.out.println("Rejoining " + chan);
+            joinChannel(chan);
+            System.out.println("Rejoined " + chan);
+        }
+        System.out.println("Rejoining finished.");
     }
 
+    public void onPreQuit() {
+        for (String s : channels) {
+            partChannel(s, "Tried to dereference 0x00000000");
+        }
+    }
 }
