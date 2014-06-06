@@ -16,25 +16,14 @@
  */
 package net.jmhertlein.alphonseirc;
 
-import java.io.File;
-import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.io.InputStream;
-import java.net.MalformedURLException;
-import java.net.URL;
+import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
-import java.util.Map;
 import java.util.Random;
-import java.util.Scanner;
-import java.util.logging.Level;
-import java.util.logging.Logger;
-import net.jmhertlein.core.io.LFSeparatedFile;
 import org.jibble.pircbot.IrcException;
 import org.jibble.pircbot.PircBot;
-import org.json.JSONObject;
-import org.yaml.snakeyaml.Yaml;
 
 /**
  *
@@ -46,6 +35,7 @@ public class AlphonseBot extends PircBot {
     private Random gen;
     private String nick, pass, server;
     private List<String> channels;
+    private LinkedList<String> previousSenders;
     private int maxXKCD;
 
     public AlphonseBot(String nick, String pass, String server, List<String> channels, int maxXKCD) {
@@ -56,6 +46,8 @@ public class AlphonseBot extends PircBot {
         setName(nick);
 
         this.maxXKCD = maxXKCD;
+
+        previousSenders = new LinkedList<>();
     }
 
     public void startConnection() throws IOException, IrcException {
@@ -88,7 +80,11 @@ public class AlphonseBot extends PircBot {
 
     @Override
     protected void onMessage(String channel, String sender, String login, String hostname, String message) {
-        if (message.toLowerCase().contains(nick.toLowerCase()))
+        if(previousSenders.size() > 200)
+            previousSenders.removeFirst();
+        previousSenders.add(sender);
+
+        if (message.toLowerCase().startsWith(nick.toLowerCase()))
             if (message.toLowerCase().contains("xkcd"))
                 sendXKCD(message, channel, sender);
             else {
@@ -96,19 +92,21 @@ public class AlphonseBot extends PircBot {
                 if (n < 3)
                     interject(message, channel);
                 else
-                    sendMessage(channel, "hashcode() of \"" + message.substring(message.indexOf(":")+2) + "\": " + message.substring(message.indexOf(":")+2).hashCode());
+                    sendMessage(channel, "hashcode() of \"" + message.substring(message.indexOf(":") + 2) + "\": " + message.substring(message.indexOf(":") + 2).hashCode());
             }
+        else if (message.startsWith("!"))
+            onCommand(channel, sender, message.substring(1).split(" "));
     }
 
     private void sendXKCD(String message, String channel, String sender) {
-        if(MSTDeskEngRunner.checkXKCDUpdate()) {
+        if (MSTDeskEngRunner.checkXKCDUpdate()) {
             this.maxXKCD = MSTDeskEngRunner.getMaxXKCD();
             MSTDeskEngRunner.writeConfig();
         }
 
         boolean accept = false;
-        for(String s : message.toLowerCase().split(" ")) {
-            if(s.hashCode() == 93747762) //magic word
+        for (String s : message.toLowerCase().split(" ")) {
+            if (s.hashCode() == 93747762) //magic word
                 accept = true;
         }
 
@@ -177,6 +175,37 @@ public class AlphonseBot extends PircBot {
     public void onPreQuit() {
         for (String s : channels) {
             partChannel(s, "Tried to dereference 0x00000000");
+        }
+    }
+
+    private void onCommand(String channel, String sender, String[] args) {
+        String cmd = args[0];
+
+        switch (cmd) {
+            case "billy":
+                sendMessage(channel, "Measuring Billium levels...");
+                int total = previousSenders.size(), billy = 0;
+                for (String previousSender : previousSenders) {
+                    if (previousSender.equals("brodes"))
+                        billy++;
+                }
+
+                if(total > 0) {
+                    BigDecimal conc = new BigDecimal(((float) billy) / total * 100);
+                    sendMessage(channel, "Current Billium concentration: " + conc.toPlainString() + "%");
+                    String status;
+                    if(conc.compareTo(new BigDecimal(.8)) > 0)
+                        status = "!!DANGER!! OVERDOSE IMMENENT";
+                    else if(conc.compareTo(new BigDecimal(.5)) > 0)
+                        status = "WARNING - DANGEROUS LEVELS";
+                    else if(conc.compareTo(new BigDecimal(.3)) > 0)
+                        status = "Caution - Levels rising, but stable";
+                    else
+                        status = "Billium levels negligible.";
+                    sendMessage(channel, "Current status: " + status);
+                } else
+                    sendMessage(channel, "Billium levels negligible.");
+                break;
         }
     }
 }
