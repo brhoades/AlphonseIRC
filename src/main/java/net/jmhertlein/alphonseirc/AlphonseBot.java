@@ -194,11 +194,11 @@ public class AlphonseBot extends PircBot {
                     BigDecimal conc = new BigDecimal(((float) billy) / total * 100);
                     sendMessage(channel, "Current Billium concentration: " + conc.toPlainString() + "%");
                     String status;
-                    if(conc.compareTo(new BigDecimal(.8)) > 0)
+                    if(conc.compareTo(new BigDecimal(80)) > 0)
                         status = "!!DANGER!! OVERDOSE IMMENENT";
-                    else if(conc.compareTo(new BigDecimal(.5)) > 0)
+                    else if(conc.compareTo(new BigDecimal(50)) > 0)
                         status = "WARNING - DANGEROUS LEVELS";
-                    else if(conc.compareTo(new BigDecimal(.3)) > 0)
+                    else if(conc.compareTo(new BigDecimal(30)) > 0)
                         status = "Caution - Levels rising, but stable";
                     else
                         status = "Billium levels negligible.";
