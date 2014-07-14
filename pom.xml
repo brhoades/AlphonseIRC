@@ -31,6 +31,12 @@
       <version>20140107</version>
     </dependency>
     <dependency>
+      <groupId>org.apache.commons</groupId>
+      <artifactId>commons-codec</artifactId>
+      <version>1.8</version>
+      <scope>compile</scope>
+    </dependency>
+    <dependency>
       <groupId>net.jmhertlein</groupId>
       <artifactId>EverCoreUtils</artifactId>
       <version>3.0-SNAPSHOT</version>

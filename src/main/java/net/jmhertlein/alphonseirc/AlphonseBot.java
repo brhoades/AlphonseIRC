@@ -22,6 +22,7 @@ import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Random;
+import net.jmhertlein.core.shaded.org.apache.commons.codec.binary.Base64;
 import org.jibble.pircbot.IrcException;
 import org.jibble.pircbot.PircBot;
 
@@ -84,7 +85,7 @@ public class AlphonseBot extends PircBot {
             previousSenders.removeFirst();
         previousSenders.add(sender);
 
-        if (message.toLowerCase().startsWith(nick.toLowerCase()))
+        if (message.toLowerCase().startsWith(nick.toLowerCase() + ":"))
             if (message.toLowerCase().contains("xkcd"))
                 sendXKCD(message, channel, sender);
             else {
@@ -132,6 +133,9 @@ public class AlphonseBot extends PircBot {
     @Override
     protected void onPrivateMessage(String sender, String login, String hostname, String message) {
         System.out.printf("[PM][%s (Login: %s)]: %s\n", sender, login, message);
+        
+        if(message.startsWith("!"))
+            onCommand(sender, sender, message.substring(1).split(" "));
     }
 
     @Override
@@ -178,30 +182,41 @@ public class AlphonseBot extends PircBot {
         }
     }
 
-    private void onCommand(String channel, String sender, String[] args) {
+    private void onCommand(String target, String sender, String[] args) {
         String cmd = args[0];
+        
+        String rest = "";
+        for(int i = 1; i < args.length; i++)
+            rest += args[i] + " ";
+        rest = rest.trim();
 
         switch (cmd) {
+            case "encode":
+                sendMessage(target, sender + ": " + Base64.encodeBase64String(rest.getBytes()));
+                break;
+            case "decode":
+                sendMessage(target, sender + ": " + new String(Base64.decodeBase64(rest)));
+                break;
             case "permute":
                 if(!sender.equals("Everdras")) {
-                    sendMessage(channel, sender + " pls go");
+                    sendMessage(target, sender + " pls go");
                     break;
                 }
                 if(args.length != 2) {
-                    sendMessage(channel, "Incorrect number of args. Usage: !permute <string>");
+                    sendMessage(target, "Incorrect number of args. Usage: !permute <string>");
                     break;
                 }
                 
                 boolean pmOutput = true;
                 String word = args[1];
                 if(word.length() > 5) {
-                    sendMessage(channel, "Too long, max length: 5");
+                    sendMessage(target, "Too long, max length: 5");
                     break;
                 }
                 
-                sendMessage(channel, "Permuting...");
+                sendMessage(target, "Permuting...");
                 List<String> perms = permute(word);
-                sendMessage(channel, "Permutations: " + perms.size());
+                sendMessage(target, "Permutations: " + perms.size());
                 
                 long origDelay = getMessageDelay();
                 this.setMessageDelay(210);
@@ -224,13 +239,13 @@ public class AlphonseBot extends PircBot {
                     output.add(b.toString());
                 
                 for(String s : output) {
-                    sendMessage(channel, s);
+                    sendMessage(target, s);
                 }
 
                 this.setMessageDelay(origDelay);
                 break;
             case "billy":
-                sendMessage(channel, "Measuring Billium levels...");
+                sendMessage(target, "Measuring Billium levels...");
                 int total = previousSenders.size(), billy = 0;
                 for (String previousSender : previousSenders) {
                     if (previousSender.equals("brodes"))
@@ -239,7 +254,7 @@ public class AlphonseBot extends PircBot {
 
                 if(total > 0) {
                     BigDecimal conc = new BigDecimal(((float) billy) / total * 100);
-                    sendMessage(channel, "Current Billium concentration: " + conc.toPlainString() + "%");
+                    sendMessage(target, "Current Billium concentration: " + conc.toPlainString() + "%");
                     String status;
                     if(conc.compareTo(new BigDecimal(80)) > 0)
                         status = "!!DANGER!! OVERDOSE IMMENENT";
@@ -249,9 +264,9 @@ public class AlphonseBot extends PircBot {
                         status = "Caution - Levels rising, but stable";
                     else
                         status = "Billium levels negligible.";
-                    sendMessage(channel, "Current status: " + status);
+                    sendMessage(target, "Current status: " + status);
                 } else
-                    sendMessage(channel, "Billium levels negligible.");
+                    sendMessage(target, "Billium levels negligible.");
                 break;
         }
     }
