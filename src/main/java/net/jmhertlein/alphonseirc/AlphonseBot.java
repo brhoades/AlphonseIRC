@@ -182,6 +182,53 @@ public class AlphonseBot extends PircBot {
         String cmd = args[0];
 
         switch (cmd) {
+            case "permute":
+                if(!sender.equals("Everdras")) {
+                    sendMessage(channel, sender + " pls go");
+                    break;
+                }
+                if(args.length != 2) {
+                    sendMessage(channel, "Incorrect number of args. Usage: !permute <string>");
+                    break;
+                }
+                
+                boolean pmOutput = true;
+                String word = args[1];
+                if(word.length() > 5) {
+                    sendMessage(channel, "Too long, max length: 5");
+                    break;
+                }
+                
+                sendMessage(channel, "Permuting...");
+                List<String> perms = permute(word);
+                sendMessage(channel, "Permutations: " + perms.size());
+                
+                long origDelay = getMessageDelay();
+                this.setMessageDelay(210);
+                
+                List<String> output = new LinkedList<>();
+                
+                StringBuilder b = new StringBuilder();
+                int c = 0;
+                for(String s : perms) {
+                    b.append(s);
+                    b.append(' ');
+                    c++;
+                    if(c == 8) {
+                        c = 0;
+                        output.add(b.toString());
+                        b = new StringBuilder();
+                    }
+                }
+                if(b.length() != 0)
+                    output.add(b.toString());
+                
+                for(String s : output) {
+                    sendMessage(channel, s);
+                }
+
+                this.setMessageDelay(origDelay);
+                break;
             case "billy":
                 sendMessage(channel, "Measuring Billium levels...");
                 int total = previousSenders.size(), billy = 0;
@@ -208,4 +255,19 @@ public class AlphonseBot extends PircBot {
                 break;
         }
     }
+    
+  public static List<String> permute(String s) {
+    List<String> ret = new LinkedList<>();
+    if(s.isEmpty()) {
+      ret.add("");
+      return ret;
+    }
+
+    for(char c : s.toCharArray()) {
+      for(String subPermute : permute(s.replaceFirst("[" + c + "]", "")))
+        ret.add(c + subPermute);
+    }
+    return ret;
+  }
+
 }
