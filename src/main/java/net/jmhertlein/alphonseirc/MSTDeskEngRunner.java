@@ -48,7 +48,7 @@ public class MSTDeskEngRunner {
     private static final File CONFIG_FILE = Files.join(System.getProperty("user.home"), ".config", "alphonseirc", "config.yml");
     private static String nick, pass, server;
     private static List<String> channels;
-    private static Set<String> noVoiceNicks;
+    private static Set<String> noVoiceNicks, masters;
     private static int maxXKCD;
     private static long cachedUTC;
 
@@ -61,7 +61,7 @@ public class MSTDeskEngRunner {
 
         loadConfig();
 
-        AlphonseBot bot = new AlphonseBot(nick, pass, server, channels, maxXKCD, noVoiceNicks);
+        AlphonseBot bot = new AlphonseBot(nick, pass, server, channels, maxXKCD, noVoiceNicks, masters);
         bot.setMessageDelay(500);
         try {
             bot.startConnection();
@@ -79,6 +79,7 @@ public class MSTDeskEngRunner {
                     bot.onPreQuit();
                     bot.disconnect();
                     bot.dispose();
+                    writeConfig();
                     quit = true;
                     System.out.println("Quit'd.");
                     break;
@@ -151,11 +152,21 @@ public class MSTDeskEngRunner {
             maxXKCD = (Integer) config.get("cachedMaxXKCD");
             cachedUTC = (Long) config.get("cachedUTC");
             noVoiceNicks = (Set<String>) config.get("noVoiceNicks");
+            masters =  (Set<String>) config.get("masters");
+            if(masters == null) {
+                masters = new HashSet<>();
+                masters.add("Everdras");
+            }
+            
             if(noVoiceNicks == null)
                 noVoiceNicks = new HashSet<>();
             
             for(String s : noVoiceNicks) {
                 System.out.println("Loaded novoice nick: " + s);
+            }
+            
+            for(String s : masters) {
+                System.out.println("Loaded master nick: " + s);
             }
             
             if(checkXKCDUpdate())
@@ -184,6 +195,7 @@ public class MSTDeskEngRunner {
         m.put("cachedMaxXKCD", maxXKCD);
         m.put("cachedUTC", cachedUTC);
         m.put("noVoiceNicks", noVoiceNicks);
+        m.put("masters", masters);
 
         Yaml yaml = new Yaml();
         String yamlOutput = yaml.dump(m);

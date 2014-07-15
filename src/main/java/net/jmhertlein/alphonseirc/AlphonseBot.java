@@ -18,7 +18,6 @@ package net.jmhertlein.alphonseirc;
 
 import java.io.IOException;
 import java.math.BigDecimal;
-import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Random;
@@ -41,9 +40,9 @@ public class AlphonseBot extends PircBot {
     private int maxXKCD;
     private boolean voicing;
     
-    private final Set<String> noVoiceNicks;
+    private final Set<String> noVoiceNicks, masters;
 
-    public AlphonseBot(String nick, String pass, String server, List<String> channels, int maxXKCD, Set<String> noVoiceNicks) {
+    public AlphonseBot(String nick, String pass, String server, List<String> channels, int maxXKCD, Set<String> noVoiceNicks, Set<String> masters) {
         this.pass = pass;
         this.nick = nick;
         this.channels = channels;
@@ -52,6 +51,7 @@ public class AlphonseBot extends PircBot {
 
         this.maxXKCD = maxXKCD;
         this.noVoiceNicks = noVoiceNicks;
+        this.masters = masters;
         voicing = true;
 
         previousSenders = new LinkedList<>();
@@ -187,7 +187,6 @@ public class AlphonseBot extends PircBot {
 
     private void onCommand(String target, String sender, String[] args) {
         String cmd = args[0];
-        
         String rest = "";
         for(int i = 1; i < args.length; i++)
             rest += args[i] + " ";
@@ -195,18 +194,24 @@ public class AlphonseBot extends PircBot {
 
         switch (cmd) {
             case "voice":
-                handleVoice(target, args, true);
+                if(masters.contains(sender))
+                    handleVoice(target, args, true);
                 break;
             case "novoice":
-                handleVoice(target, args, false);
+                if(masters.contains(sender))
+                    handleVoice(target, args, false);
                 break;
             case "stopvoice":
-                voicing = false;
-                sendMessage(target, "Stopping voicing.");
+                if(masters.contains(sender)) {
+                    voicing = false;
+                    sendMessage(target, "Stopping voicing.");
+                }
                 break;
             case "startvoice":
-                voicing = true;
-                sendMessage(target, "Resuming voicing.");
+                if(masters.contains(sender)) {
+                    voicing = true;
+                    sendMessage(target, "Resuming voicing.");
+                }
                 break;
             case "xkcd":
                 sendXKCD(target, sender);
