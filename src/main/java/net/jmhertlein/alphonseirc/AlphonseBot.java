@@ -19,6 +19,7 @@ package net.jmhertlein.alphonseirc;
 import java.io.IOException;
 import java.math.BigDecimal;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Random;
@@ -75,8 +76,11 @@ public class AlphonseBot extends PircBot {
 
     @Override
     protected void onConnect() {
-        this.identify(pass);
-        System.out.println("Messaged NickServ");
+        if(!pass.isEmpty()) {
+            this.identify(pass);
+            System.out.println("Messaged NickServ");
+        } else
+            System.out.println("Empty pass, skipping nickserv identification.");
     }
 
     @Override
@@ -84,50 +88,41 @@ public class AlphonseBot extends PircBot {
         if(previousSenders.size() > 200)
             previousSenders.removeFirst();
         previousSenders.add(sender);
+        
+        if(message.equalsIgnoreCase(String.format("%s: help", nick))) {
+            sendMessage(sender, "Master, I am capable of many things. I shall list them:");
+            sendMessage(sender, "Lord Munroe is truly witty- I can fetch you one of his drole comics. (!xkcd)");
+            sendMessage(sender, "I am well-versed in the art of converting phrases to numbers. (!hash)");
+            sendMessage(sender, "Lord Stallman's logic is undeniable. I can correct the verbiage of the unenlightened with His GNU+Wisdom. (!interject)");
+            sendMessage(sender, "I am also well-phrased in the art of turning phrases into letters. (!encode)");
+            sendMessage(sender, "I can also turn them back into phrases. (!decode)");
+            sendMessage(sender, "And sir, should you wish me to keep your orders private, simply /msg me them and I will report them to you confidentially.");
+        }
 
-        if (message.toLowerCase().startsWith(nick.toLowerCase() + ":"))
-            if (message.toLowerCase().contains("xkcd"))
-                sendXKCD(message, channel, sender);
-            else {
-                int n = gen.nextInt(100);
-                if (n < 3)
-                    interject(message, channel);
-                else
-                    sendMessage(channel, "hashcode() of \"" + message.substring(message.indexOf(":") + 2) + "\": " + message.substring(message.indexOf(":") + 2).hashCode());
-            }
-        else if (message.startsWith("!"))
+        
+        if (message.startsWith("!"))
             onCommand(channel, sender, message.substring(1).split(" "));
     }
 
-    private void sendXKCD(String message, String channel, String sender) {
+    private void sendXKCD(String channel, String sender) {
         if (MSTDeskEngRunner.checkXKCDUpdate()) {
             this.maxXKCD = MSTDeskEngRunner.getMaxXKCD();
             MSTDeskEngRunner.writeConfig();
         }
 
-        boolean accept = false;
-        for (String s : message.toLowerCase().split(" ")) {
-            if (s.hashCode() == 93747762) //magic word
-                accept = true;
-        }
-
-        if (message.toLowerCase().contains("please") || accept)
-            sendMessage(channel, sender + ": I found an XKCD for you: https://xkcd.com/" + (1 + gen.nextInt(maxXKCD)));
-        else
-            sendMessage(channel, sender + ": Say \"please\"!");
+        sendMessage(channel, sender + ": Your XKCD is ready, sir: https://xkcd.com/" + (1 + gen.nextInt(maxXKCD)));
     }
 
-    private void interject(String message, String channel) {
-        String[] words = message.split(" ");
-        List<String> wordList = new ArrayList<>(words.length);
-        for (String w : words) {
-            if (!w.toLowerCase().contains(nick.toLowerCase()))
-                wordList.add(w);
+    private void interject(String target, String[] args) {
+        String name, word;
+        if(args.length != 3) {
+            sendMessage(target, "Incorrect number of args. Usage: !interject <GNU+target> <GNU+word>");
+            return;
         }
-        if (wordList.size() >= 1) {
-            String word = wordList.get(gen.nextInt(wordList.size()));
-            sendMessage(channel, INTERJECTION.replace("$WORD", word));
-        }
+        name = args[1];
+        word = args[2];
+        
+        sendMessage(target, name + ": " + INTERJECTION.replace("$WORD", word));
     }
 
     @Override
@@ -191,6 +186,15 @@ public class AlphonseBot extends PircBot {
         rest = rest.trim();
 
         switch (cmd) {
+            case "xkcd":
+                sendXKCD(target, sender);
+                break;
+            case "interject":
+                interject(target, args);
+                break;
+            case "hash":
+                handleHashCommand(target, sender, args, cmd, rest);
+                break;
             case "encode":
                 sendMessage(target, sender + ": " + Base64.encodeBase64String(rest.getBytes()));
                 break;
@@ -284,4 +288,8 @@ public class AlphonseBot extends PircBot {
     }
     return ret;
   }
+
+    private void handleHashCommand(String target, String sender, String[] args, String cmd, String rest) {
+        sendMessage(target, "hashcode() of \"" + rest + "\": " + rest.hashCode());
+    }
 }
