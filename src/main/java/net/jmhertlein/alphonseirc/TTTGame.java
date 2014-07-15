@@ -6,6 +6,9 @@
 
 package net.jmhertlein.alphonseirc;
 
+import java.awt.Color;
+import org.jibble.pircbot.Colors;
+
 /**
  *
  * @author joshua
@@ -57,7 +60,7 @@ public class TTTGame {
     }
     
     /**
-     * Tries to make a move for ap layer
+     * Tries to make a move for a player
      * @param nick
      * @param x
      * @param y
@@ -78,38 +81,82 @@ public class TTTGame {
         xTurn = !xTurn;
     }
     
+    public boolean isValidMove(int x, int y) {
+        return board[x][y] == '_' || board[x][y] == ' ';
+    }
+    
     public String[] printBoard() {
         String[] ret = new String[board.length];
         
-        StringBuilder b = new StringBuilder(board.length * 2 - 1);
-        for(int y = 0; y < board.length; y++) {
-            for(int x = 0; x < board[y].length; x++) {
-                b.append(board[x][y]);
-                if(x != board.length - 1)
-                    b.append("|");
-            }
-            ret[y] = b.toString();
-            b = new StringBuilder(board.length * 2 - 1);
-        }
+        ret[0] = fetchPretty(0,0) + Colors.UNDERLINE + "|" + fetchPretty(1,0) + Colors.UNDERLINE + "|" +  fetchPretty(2,0);
+        ret[1] = fetchPretty(0,1) + Colors.UNDERLINE + "|" + fetchPretty(1,1) + Colors.UNDERLINE + "|" +  fetchPretty(2,1);
+        ret[2] = fetchPretty(0,2, false) + "|" + fetchPretty(1,2, false) + "|" +  fetchPretty(2,2, false);
         return ret;
     }
     
-    public static void main(String ... args) {
-        TTTGame g = new TTTGame("X", "O");
+    private String fetchPretty(int x, int y) {
+        return fetchPretty(x, y, true);
+    }
+    
+    private String fetchPretty(int x, int y, boolean underlined) {
+        StringBuilder b = new StringBuilder();
+        boolean isTaken = (board[x][y] == 'X' || board[x][y] == 'O');
         
-        g.placeX(1,1);
-        
-        System.out.println("\n");
-        for(String s : g.printBoard()) {
-            System.out.println(s);
+        if(isTaken) {
+            b.append(underlined ? Colors.UNDERLINE : Colors.NORMAL);
+            b.append(board[x][y]);
+            b.append(Colors.NORMAL);
+        } else {
+            b.append(Colors.BLUE);
+            b.append(encode(x,y));
+            b.append(Colors.NORMAL);
         }
         
-        System.out.println(g.isWon());
-        System.out.println(g.getWinner());
+        return b.toString();
+    }
+    
+    public static char encode(int x, int y) {
+        return (char) ('A' + (y*3 + x));
+    }
+    
+    public static int[] decode(char c) {
+        c -= 'A';
+        int y = c / 3, x = c % 3;
+        return new int[]{x,y};
+    }
+
+    public boolean isXTurn() {
+        return xTurn;
+    }
+    
+    
+    public static void main(String ... args) {
+//        TTTGame g = new TTTGame("X", "O");
+//        
+//        g.placeX(1,1);
+//        
+//        System.out.println("\n");
+//        for(String s : g.printBoard()) {
+//            System.out.println(s);
+//        }
+//        
+//        System.out.println(g.isWon());
+//        System.out.println(g.getWinner());
+        
+        System.out.println(encode(0,0));
+        for(int i : decode('E'))
+            System.out.println(i);
     }
     
     public String getWinner() {
         char winner = 0;
+        
+        //check full board
+        boolean full = true;
+        for(char[] arr : board)
+            for(char c : arr)
+                full &= (c == 'X' || c == 'O');
+        
         //check columns
         for(int x = 0; x < board.length; x++) {
             if(board[x][0] == board[x][1] 
@@ -138,14 +185,15 @@ public class TTTGame {
             System.out.println("Won diagonally from top-right");
         }
         
-        if(winner == 0)
-            return null;
-        else if(winner == 'X')
+        if(winner == 'X')
             return xPlayer;
         else if(winner == 'O')
             return oPlayer;
+        else if(full)
+            return "Nobody";
         else
             return null;
+        
     }
     
     public boolean isWon() {

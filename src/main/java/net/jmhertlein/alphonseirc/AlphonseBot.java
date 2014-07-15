@@ -40,7 +40,7 @@ public class AlphonseBot extends PircBot {
     private int maxXKCD;
     private boolean voicing;
     private TTTGame ttt;
-    
+
     private final Set<String> noVoiceNicks, masters;
 
     public AlphonseBot(String nick, String pass, String server, List<String> channels, int maxXKCD, Set<String> noVoiceNicks, Set<String> masters) {
@@ -72,33 +72,36 @@ public class AlphonseBot extends PircBot {
 
     @Override
     protected void onJoin(String channel, String sender, String login, String hostname) {
-        if (sender.equals(nick))
+        if (sender.equals(nick)) {
             return;
+        }
 
-        if(voicing && !noVoiceNicks.contains(sender)) {
+        if (voicing && !noVoiceNicks.contains(sender)) {
             voice(channel, sender);
         }
-        
+
         System.out.println("Voiced " + sender);
         System.out.println(sender + " joined.");
     }
 
     @Override
     protected void onConnect() {
-        if(!pass.isEmpty()) {
+        if (!pass.isEmpty()) {
             this.identify(pass);
             System.out.println("Messaged NickServ");
-        } else
+        } else {
             System.out.println("Empty pass, skipping nickserv identification.");
+        }
     }
 
     @Override
     protected void onMessage(String channel, String sender, String login, String hostname, String message) {
-        if(previousSenders.size() > 200)
+        if (previousSenders.size() > 200) {
             previousSenders.removeFirst();
+        }
         previousSenders.add(sender);
-        
-        if(message.equalsIgnoreCase(String.format("%s: help", nick))) {
+
+        if (message.equalsIgnoreCase(String.format("%s: help", nick))) {
             sendMessage(sender, "Master, I am capable of many things. I shall list them:");
             sendMessage(sender, "Lord Munroe is truly witty- I can fetch you one of his drole comics. (!xkcd)");
             sendMessage(sender, "I am well-versed in the art of converting phrases to numbers. (!hash)");
@@ -108,9 +111,9 @@ public class AlphonseBot extends PircBot {
             sendMessage(sender, "And sir, should you wish me to keep your orders private, simply /msg me them and I will report them to you confidentially.");
         }
 
-        
-        if (message.startsWith("!"))
+        if (message.startsWith("!")) {
             onCommand(channel, sender, message.substring(1).split(" "));
+        }
     }
 
     private void sendXKCD(String channel, String sender) {
@@ -124,22 +127,23 @@ public class AlphonseBot extends PircBot {
 
     private void interject(String target, String[] args) {
         String name, word;
-        if(args.length != 3) {
+        if (args.length != 3) {
             sendMessage(target, "Incorrect number of args. Usage: !interject <GNU+target> <GNU+word>");
             return;
         }
         name = args[1];
         word = args[2];
-        
+
         sendMessage(target, name + ": " + INTERJECTION.replace("$WORD", word));
     }
 
     @Override
     protected void onPrivateMessage(String sender, String login, String hostname, String message) {
         System.out.printf("[PM][%s (Login: %s)]: %s\n", sender, login, message);
-        
-        if(message.startsWith("!"))
+
+        if (message.startsWith("!")) {
             onCommand(sender, sender, message.substring(1).split(" "));
+        }
     }
 
     @Override
@@ -189,27 +193,30 @@ public class AlphonseBot extends PircBot {
     private void onCommand(String target, String sender, String[] args) {
         String cmd = args[0];
         String rest = "";
-        for(int i = 1; i < args.length; i++)
+        for (int i = 1; i < args.length; i++) {
             rest += args[i] + " ";
+        }
         rest = rest.trim();
 
         switch (cmd) {
             case "voice":
-                if(masters.contains(sender))
+                if (masters.contains(sender)) {
                     handleVoice(target, args, true);
+                }
                 break;
             case "novoice":
-                if(masters.contains(sender))
+                if (masters.contains(sender)) {
                     handleVoice(target, args, false);
+                }
                 break;
             case "stopvoice":
-                if(masters.contains(sender)) {
+                if (masters.contains(sender)) {
                     voicing = false;
                     sendMessage(target, "Stopping voicing.");
                 }
                 break;
             case "startvoice":
-                if(masters.contains(sender)) {
+                if (masters.contains(sender)) {
                     voicing = true;
                     sendMessage(target, "Resuming voicing.");
                 }
@@ -235,6 +242,7 @@ public class AlphonseBot extends PircBot {
             case "billy":
                 handleBillyCommand(target);
                 break;
+            case "tt":
             case "ttt":
                 handleTTTCommand(target, sender, args);
         }
@@ -244,24 +252,27 @@ public class AlphonseBot extends PircBot {
         sendMessage(target, "Measuring Billium levels...");
         int total = previousSenders.size(), billy = 0;
         for (String previousSender : previousSenders) {
-            if (previousSender.equals("brodes"))
+            if (previousSender.equals("brodes")) {
                 billy++;
+            }
         }
-        if(total > 0) {
+        if (total > 0) {
             BigDecimal conc = new BigDecimal(((float) billy) / total * 100);
             sendMessage(target, "Current Billium concentration: " + conc.toPlainString() + "%");
             String status;
-            if(conc.compareTo(new BigDecimal(80)) > 0)
+            if (conc.compareTo(new BigDecimal(80)) > 0) {
                 status = "!!DANGER!! OVERDOSE IMMENENT";
-            else if(conc.compareTo(new BigDecimal(50)) > 0)
+            } else if (conc.compareTo(new BigDecimal(50)) > 0) {
                 status = "WARNING - DANGEROUS LEVELS";
-            else if(conc.compareTo(new BigDecimal(30)) > 0)
+            } else if (conc.compareTo(new BigDecimal(30)) > 0) {
                 status = "Caution - Levels rising, but stable";
-            else
+            } else {
                 status = "Billium levels negligible.";
+            }
             sendMessage(target, "Current status: " + status);
-        } else
+        } else {
             sendMessage(target, "Billium levels negligible.");
+        }
     }
 
     private void handlePermuteCommand(String sender, String target, String[] args) {
@@ -273,7 +284,7 @@ public class AlphonseBot extends PircBot {
             sendMessage(target, "Incorrect number of args. Usage: !permute <string>");
             return;
         }
-        
+
         String word = args[1];
         if (word.length() > 5) {
             sendMessage(target, "Too long, max length: 5");
@@ -283,54 +294,56 @@ public class AlphonseBot extends PircBot {
         List<String> perms = permute(word);
         sendMessage(target, "Permutations: " + perms.size());
         long origDelay = getMessageDelay();
-        this.setMessageDelay(210);
+        this.setMessageDelay(10);
         List<String> output = new LinkedList<>();
         StringBuilder b = new StringBuilder();
         int c = 0;
-        for(String s : perms) {
+        for (String s : perms) {
             b.append(s);
             b.append(' ');
             c++;
-            if(c == 8) {
+            if (c == 8) {
                 c = 0;
                 output.add(b.toString());
                 b = new StringBuilder();
             }
         }
-        if(b.length() != 0)
+        if (b.length() != 0) {
             output.add(b.toString());
-        for(String s : output) {
+        }
+        for (String s : output) {
             sendMessage(target, s);
         }
         this.setMessageDelay(origDelay);
     }
-    
-  public static List<String> permute(String s) {
-    List<String> ret = new LinkedList<>();
-    if(s.isEmpty()) {
-      ret.add("");
-      return ret;
-    }
 
-    for(char c : s.toCharArray()) {
-      for(String subPermute : permute(s.replaceFirst("[" + c + "]", "")))
-        ret.add(c + subPermute);
+    public static List<String> permute(String s) {
+        List<String> ret = new LinkedList<>();
+        if (s.isEmpty()) {
+            ret.add("");
+            return ret;
+        }
+
+        for (char c : s.toCharArray()) {
+            for (String subPermute : permute(s.replaceFirst("[" + c + "]", ""))) {
+                ret.add(c + subPermute);
+            }
+        }
+        return ret;
     }
-    return ret;
-  }
 
     private void handleHashCommand(String target, String sender, String[] args, String cmd, String rest) {
         sendMessage(target, "hashcode() of \"" + rest + "\": " + rest.hashCode());
     }
 
     private void handleVoice(String target, String[] args, boolean voiced) {
-        if(args.length != 2) {
+        if (args.length != 2) {
             sendMessage(target, "Incorrect number of args. Usage: !novoice <nick>");
             return;
         }
         String targetNick = args[1];
-        
-        if(voiced) {
+
+        if (voiced) {
             noVoiceNicks.remove(targetNick);
             voice(target, targetNick);
             sendMessage(target, "Voiced " + targetNick);
@@ -339,53 +352,57 @@ public class AlphonseBot extends PircBot {
             deVoice(target, targetNick);
             sendMessage(target, "Devoiced " + targetNick);
         }
-        
+
         MSTDeskEngRunner.writeConfig();
     }
 
     private void handleTTTCommand(String target, String sender, String[] args) {
         String cmd;
-        if(args.length > 1)
+        if (args.length > 1) {
             cmd = args[1];
-        else {
+        } else {
             sendMessage(target, "Incorrect number of args. Usage: !ttt [start|kill|mv]");
             return;
         }
-        
-        switch(cmd) {
+
+        switch (cmd) {
             case "start":
-                if(args.length != 3) {
+                if (args.length != 3) {
                     sendMessage(target, "Incorrect number of args. Usage: !ttt start [otherPlayer]");
                     break;
                 }
-                
-                if(ttt != null) {
+
+                if (ttt != null) {
                     sendMessage(target, "Game already in progress.");
                     break;
                 }
-                String x, o;
-                if(gen.nextBoolean()) {
+                String x,
+                 o;
+                if (gen.nextBoolean()) {
                     x = sender;
                     o = args[2];
                 } else {
                     x = args[2];
                     o = sender;
                 }
-                
+
                 ttt = new TTTGame(x, o);
                 sendMessage(target, "X player is: " + x);
                 sendMessage(target, "O player is: " + o);
                 sendMessage(target, "X goes first.");
-                for(String s : ttt.printBoard()) {
+                long original = getMessageDelay();
+                setMessageDelay(10);
+                for (String s : ttt.printBoard()) {
                     sendMessage(target, s);
                 }
+                setMessageDelay(original);
                 break;
             case "kill":
-                if(ttt == null) {
+                if (ttt == null) {
                     sendMessage(target, "No game to kill.");
                     break;
                 }
-                if(masters.contains(sender) || ttt.isParticipating(nick)) {
+                if (masters.contains(sender) || ttt.isParticipating(nick)) {
                     ttt = null;
                     sendMessage(target, "Game killed.");
                 } else {
@@ -393,50 +410,98 @@ public class AlphonseBot extends PircBot {
                     break;
                 }
                 break;
+            case "move":
             case "mv":
-                if(args.length !=  4) {
-                    sendMessage(target, "Incorrect number of args. Usage: !ttt mv <x> <y>  where (0,0) is the top-left");
-                    break;
-                }
-                String xPos = args[2], yPos = args[3];
-                int i, j;
-                try {
-                    i = Integer.parseInt(xPos);
-                } catch(NumberFormatException nfe) {
-                    sendMessage(target, String.format("Invalid integer \"%s\", should be int in range [0,2] inclusive.", xPos));
-                    break;
-                }
-                try {
-                    j = Integer.parseInt(yPos);
-                } catch(NumberFormatException nfe) {
-                    sendMessage(target, String.format("Invalid integer \"%s\", should be int in range [0,2] inclusive.", yPos));
-                    break;
-                }
+                int[] dest = handleDestProcessing(target, args);
                 
-                if(ttt.moveForPlayer(sender, i, j)) {
+                if(dest == null)
+                    return;
+
+                int i = dest[0],
+                 j = dest[1];
+
+                if (!ttt.isValidMove(i, j)) {
+                    sendMessage(target, "Invalid move.");
+                    break;
+                }
+
+                if (ttt.moveForPlayer(sender, i, j)) {
                     sendMessage(target, "Moved.");
                     long orig = getMessageDelay();
-                    this.setMessageDelay(0);
-                    for(String s : ttt.printBoard())
+                    this.setMessageDelay(10);
+                    for (String s : ttt.printBoard()) {
                         sendMessage(target, s);
+                    }
                     setMessageDelay(orig);
                     ttt.flipTurn();
                 } else {
                     sendMessage(target, sender + ": You're either not in this game, or it's not your turn.");
                     break;
                 }
-                
-                if(ttt.isWon()) {
+
+                if (ttt.isWon()) {
                     sendMessage(target, ttt.getWinner() + " has won.");
                     ttt = null;
+                }
+                break;
+            case "print":
+                if (ttt == null) {
+                    sendMessage(target, "No game in session.");
+                    break;
+                } else {
+                    for (String s : ttt.printBoard()) {
+                        sendMessage(target, s);
+                    }
+                    sendMessage(target, "It is " + (ttt.isXTurn() ? "X" : "O") + "'s turn.");
                 }
                 break;
             default:
                 sendMessage(target, "Unknown sub-command of !ttt. Usage: !ttt start [otherPlayer]");
                 break;
         }
-        
-        
+
+    }
+
+    private int[] handleDestProcessing(String target, String[] args) {
+        if (args.length == 4) {
+            String xPos = args[2], yPos = args[3];
+            int i, j;
+            try {
+                i = Integer.parseInt(xPos);
+                if (i < 0 || i > 2) {
+                    throw new NumberFormatException();
+                }
+            } catch (NumberFormatException nfe) {
+                sendMessage(target, String.format("Invalid integer \"%s\", should be int in range [0,2] inclusive.", xPos));
+                return null;
+            }
+            try {
+                j = Integer.parseInt(yPos);
+                if (j < 0 || j > 2) {
+                    throw new NumberFormatException();
+                }
+            } catch (NumberFormatException nfe) {
+                sendMessage(target, String.format("Invalid integer \"%s\", should be int in range [0,2] inclusive.", yPos));
+                return null;
+            }
             
+            return new int[]{i, j};
+        } else if (args.length == 3) {
+            if(args[2].length() != 1) {
+                sendMessage(target, "Label should be a single character between A and I, inclusive.");
+                return null;
+            }
+            
+            char input = args[2].toUpperCase().charAt(0);
+            if(input < 'A' || input > 'I') {
+                sendMessage(target, "Label should be a single character between A and I, inclusive.");
+                return null;
+            }
+            
+            return TTTGame.decode(input);
+        } else {
+            sendMessage(target, "Incorrect number of args. Usage: !ttt mv (<x> <y>|<label>)  where (0,0) is the top-left");
+            return null;
+        }
     }
 }
