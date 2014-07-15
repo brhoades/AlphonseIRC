@@ -39,6 +39,7 @@ public class AlphonseBot extends PircBot {
     private final LinkedList<String> previousSenders;
     private int maxXKCD;
     private boolean voicing;
+    private TTTGame ttt;
     
     private final Set<String> noVoiceNicks, masters;
 
@@ -234,6 +235,8 @@ public class AlphonseBot extends PircBot {
             case "billy":
                 handleBillyCommand(target);
                 break;
+            case "ttt":
+                handleTTTCommand(target, sender, args);
         }
     }
 
@@ -338,5 +341,102 @@ public class AlphonseBot extends PircBot {
         }
         
         MSTDeskEngRunner.writeConfig();
+    }
+
+    private void handleTTTCommand(String target, String sender, String[] args) {
+        String cmd;
+        if(args.length > 1)
+            cmd = args[1];
+        else {
+            sendMessage(target, "Incorrect number of args. Usage: !ttt [start|kill|mv]");
+            return;
+        }
+        
+        switch(cmd) {
+            case "start":
+                if(args.length != 3) {
+                    sendMessage(target, "Incorrect number of args. Usage: !ttt start [otherPlayer]");
+                    break;
+                }
+                
+                if(ttt != null) {
+                    sendMessage(target, "Game already in progress.");
+                    break;
+                }
+                String x, o;
+                if(gen.nextBoolean()) {
+                    x = sender;
+                    o = args[2];
+                } else {
+                    x = args[2];
+                    o = sender;
+                }
+                
+                ttt = new TTTGame(x, o);
+                sendMessage(target, "X player is: " + x);
+                sendMessage(target, "O player is: " + o);
+                sendMessage(target, "X goes first.");
+                for(String s : ttt.printBoard()) {
+                    sendMessage(target, s);
+                }
+                break;
+            case "kill":
+                if(ttt == null) {
+                    sendMessage(target, "No game to kill.");
+                    break;
+                }
+                if(masters.contains(sender) || ttt.isParticipating(nick)) {
+                    ttt = null;
+                    sendMessage(target, "Game killed.");
+                } else {
+                    sendMessage(target, "Insufficient permission to kill game.");
+                    break;
+                }
+                break;
+            case "mv":
+                if(args.length !=  4) {
+                    sendMessage(target, "Incorrect number of args. Usage: !ttt mv <x> <y>  where (0,0) is the top-left");
+                    break;
+                }
+                String xPos = args[2], yPos = args[3];
+                int i, j;
+                try {
+                    i = Integer.parseInt(xPos);
+                } catch(NumberFormatException nfe) {
+                    sendMessage(target, String.format("Invalid integer \"%s\", should be int in range [0,2] inclusive.", xPos));
+                    break;
+                }
+                try {
+                    j = Integer.parseInt(yPos);
+                } catch(NumberFormatException nfe) {
+                    sendMessage(target, String.format("Invalid integer \"%s\", should be int in range [0,2] inclusive.", yPos));
+                    break;
+                }
+                
+                if(ttt.moveForPlayer(sender, i, j)) {
+                    sendMessage(target, "Moved.");
+                    long orig = getMessageDelay();
+                    this.setMessageDelay(0);
+                    for(String s : ttt.printBoard())
+                        sendMessage(target, s);
+                    setMessageDelay(orig);
+                    ttt.flipTurn();
+                } else {
+                    sendMessage(target, sender + ": You're either not in this game, or it's not your turn.");
+                    break;
+                }
+                
+                if(ttt.isWon()) {
+                    sendMessage(target, ttt.getWinner() + " has won.");
+                    ttt = null;
+                }
+                break;
+            default:
+                sendMessage(target, "Unknown sub-command of !ttt. Usage: !ttt start [otherPlayer]");
+                break;
+        }
+        
+        
+            
     }
 }
