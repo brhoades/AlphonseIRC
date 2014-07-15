@@ -18,11 +18,11 @@ package net.jmhertlein.alphonseirc;
 
 import java.io.IOException;
 import java.math.BigDecimal;
-import java.util.ArrayList;
-import java.util.Arrays;
+import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Random;
+import java.util.Set;
 import org.apache.commons.codec.binary.Base64;
 import org.jibble.pircbot.IrcException;
 import org.jibble.pircbot.PircBot;
@@ -39,8 +39,11 @@ public class AlphonseBot extends PircBot {
     private final List<String> channels;
     private final LinkedList<String> previousSenders;
     private int maxXKCD;
+    private boolean voicing;
+    
+    private final Set<String> noVoiceNicks;
 
-    public AlphonseBot(String nick, String pass, String server, List<String> channels, int maxXKCD) {
+    public AlphonseBot(String nick, String pass, String server, List<String> channels, int maxXKCD, Set<String> noVoiceNicks) {
         this.pass = pass;
         this.nick = nick;
         this.channels = channels;
@@ -48,6 +51,8 @@ public class AlphonseBot extends PircBot {
         setName(nick);
 
         this.maxXKCD = maxXKCD;
+        this.noVoiceNicks = noVoiceNicks;
+        voicing = true;
 
         previousSenders = new LinkedList<>();
     }
@@ -69,7 +74,10 @@ public class AlphonseBot extends PircBot {
         if (sender.equals(nick))
             return;
 
-        voice(channel, sender);
+        if(voicing && !noVoiceNicks.contains(sender)) {
+            voice(channel, sender);
+        }
+        
         System.out.println("Voiced " + sender);
         System.out.println(sender + " joined.");
     }
@@ -186,6 +194,20 @@ public class AlphonseBot extends PircBot {
         rest = rest.trim();
 
         switch (cmd) {
+            case "voice":
+                handleVoice(target, args, true);
+                break;
+            case "novoice":
+                handleVoice(target, args, false);
+                break;
+            case "stopvoice":
+                voicing = false;
+                sendMessage(target, "Stopping voicing.");
+                break;
+            case "startvoice":
+                voicing = true;
+                sendMessage(target, "Resuming voicing.");
+                break;
             case "xkcd":
                 sendXKCD(target, sender);
                 break;
@@ -291,5 +313,25 @@ public class AlphonseBot extends PircBot {
 
     private void handleHashCommand(String target, String sender, String[] args, String cmd, String rest) {
         sendMessage(target, "hashcode() of \"" + rest + "\": " + rest.hashCode());
+    }
+
+    private void handleVoice(String target, String[] args, boolean voiced) {
+        if(args.length != 2) {
+            sendMessage(target, "Incorrect number of args. Usage: !novoice <nick>");
+            return;
+        }
+        String targetNick = args[1];
+        
+        if(voiced) {
+            noVoiceNicks.remove(targetNick);
+            voice(target, targetNick);
+            sendMessage(target, "Voiced " + targetNick);
+        } else {
+            noVoiceNicks.add(targetNick);
+            deVoice(target, targetNick);
+            sendMessage(target, "Devoiced " + targetNick);
+        }
+        
+        MSTDeskEngRunner.writeConfig();
     }
 }

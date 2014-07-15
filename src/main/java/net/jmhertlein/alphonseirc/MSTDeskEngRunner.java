@@ -27,9 +27,11 @@ import java.nio.file.Paths;
 import java.nio.file.attribute.PosixFilePermissions;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Scanner;
+import java.util.Set;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import net.jmhertlein.core.io.Files;
@@ -46,6 +48,7 @@ public class MSTDeskEngRunner {
     private static final File CONFIG_FILE = Files.join(System.getProperty("user.home"), ".config", "alphonseirc", "config.yml");
     private static String nick, pass, server;
     private static List<String> channels;
+    private static Set<String> noVoiceNicks;
     private static int maxXKCD;
     private static long cachedUTC;
 
@@ -58,7 +61,7 @@ public class MSTDeskEngRunner {
 
         loadConfig();
 
-        AlphonseBot bot = new AlphonseBot(nick, pass, server, channels, maxXKCD);
+        AlphonseBot bot = new AlphonseBot(nick, pass, server, channels, maxXKCD, noVoiceNicks);
         bot.setMessageDelay(500);
         try {
             bot.startConnection();
@@ -125,6 +128,8 @@ public class MSTDeskEngRunner {
             maxXKCD = fetchMaxXKCD();
             System.out.println("Fetched.");
             cachedUTC = System.currentTimeMillis();
+            
+            noVoiceNicks = new HashSet<>();
 
             writeConfig();
             System.out.println("Wrote config to file: " + CONFIG_FILE.getAbsolutePath());
@@ -145,6 +150,14 @@ public class MSTDeskEngRunner {
             channels = (List<String>) config.get("channels");
             maxXKCD = (Integer) config.get("cachedMaxXKCD");
             cachedUTC = (Long) config.get("cachedUTC");
+            noVoiceNicks = (Set<String>) config.get("noVoiceNicks");
+            if(noVoiceNicks == null)
+                noVoiceNicks = new HashSet<>();
+            
+            for(String s : noVoiceNicks) {
+                System.out.println("Loaded novoice nick: " + s);
+            }
+            
             if(checkXKCDUpdate())
                 writeConfig();
             else
@@ -170,6 +183,7 @@ public class MSTDeskEngRunner {
         m.put("channels", channels);
         m.put("cachedMaxXKCD", maxXKCD);
         m.put("cachedUTC", cachedUTC);
+        m.put("noVoiceNicks", noVoiceNicks);
 
         Yaml yaml = new Yaml();
         String yamlOutput = yaml.dump(m);
