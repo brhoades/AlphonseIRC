@@ -22,7 +22,7 @@ import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Random;
-import net.jmhertlein.core.shaded.org.apache.commons.codec.binary.Base64;
+import org.apache.commons.codec.binary.Base64;
 import org.jibble.pircbot.IrcException;
 import org.jibble.pircbot.PircBot;
 
@@ -32,11 +32,11 @@ import org.jibble.pircbot.PircBot;
  */
 public class AlphonseBot extends PircBot {
 
-    private static String INTERJECTION = "I'd just like to interject for moment. What you're refering to as $WORD, is in fact, GNU/$WORD, or as I've recently taken to calling it, GNU plus $WORD. $WORD is not a word unto itself, but rather another free component of a fully functioning GNU word made useful by the GNU letters, vowels and vital verbiage components comprising a full word as defined by POSIX. ";
+    private static final String INTERJECTION = "I'd just like to interject for moment. What you're refering to as $WORD, is in fact, GNU/$WORD, or as I've recently taken to calling it, GNU plus $WORD. $WORD is not a word unto itself, but rather another free component of a fully functioning GNU word made useful by the GNU letters, vowels and vital verbiage components comprising a full word as defined by POSIX. ";
     private Random gen;
-    private String nick, pass, server;
-    private List<String> channels;
-    private LinkedList<String> previousSenders;
+    private final String nick, pass, server;
+    private final List<String> channels;
+    private final LinkedList<String> previousSenders;
     private int maxXKCD;
 
     public AlphonseBot(String nick, String pass, String server, List<String> channels, int maxXKCD) {
@@ -198,77 +198,77 @@ public class AlphonseBot extends PircBot {
                 sendMessage(target, sender + ": " + new String(Base64.decodeBase64(rest)));
                 break;
             case "permute":
-                if(!sender.equals("Everdras")) {
-                    sendMessage(target, sender + " pls go");
-                    break;
-                }
-                if(args.length != 2) {
-                    sendMessage(target, "Incorrect number of args. Usage: !permute <string>");
-                    break;
-                }
-                
-                boolean pmOutput = true;
-                String word = args[1];
-                if(word.length() > 5) {
-                    sendMessage(target, "Too long, max length: 5");
-                    break;
-                }
-                
-                sendMessage(target, "Permuting...");
-                List<String> perms = permute(word);
-                sendMessage(target, "Permutations: " + perms.size());
-                
-                long origDelay = getMessageDelay();
-                this.setMessageDelay(210);
-                
-                List<String> output = new LinkedList<>();
-                
-                StringBuilder b = new StringBuilder();
-                int c = 0;
-                for(String s : perms) {
-                    b.append(s);
-                    b.append(' ');
-                    c++;
-                    if(c == 8) {
-                        c = 0;
-                        output.add(b.toString());
-                        b = new StringBuilder();
-                    }
-                }
-                if(b.length() != 0)
-                    output.add(b.toString());
-                
-                for(String s : output) {
-                    sendMessage(target, s);
-                }
-
-                this.setMessageDelay(origDelay);
+                handlePermuteCommand(sender, target, args);
                 break;
             case "billy":
-                sendMessage(target, "Measuring Billium levels...");
-                int total = previousSenders.size(), billy = 0;
-                for (String previousSender : previousSenders) {
-                    if (previousSender.equals("brodes"))
-                        billy++;
-                }
-
-                if(total > 0) {
-                    BigDecimal conc = new BigDecimal(((float) billy) / total * 100);
-                    sendMessage(target, "Current Billium concentration: " + conc.toPlainString() + "%");
-                    String status;
-                    if(conc.compareTo(new BigDecimal(80)) > 0)
-                        status = "!!DANGER!! OVERDOSE IMMENENT";
-                    else if(conc.compareTo(new BigDecimal(50)) > 0)
-                        status = "WARNING - DANGEROUS LEVELS";
-                    else if(conc.compareTo(new BigDecimal(30)) > 0)
-                        status = "Caution - Levels rising, but stable";
-                    else
-                        status = "Billium levels negligible.";
-                    sendMessage(target, "Current status: " + status);
-                } else
-                    sendMessage(target, "Billium levels negligible.");
+                handleBillyCommand(target);
                 break;
         }
+    }
+
+    private void handleBillyCommand(String target) {
+        sendMessage(target, "Measuring Billium levels...");
+        int total = previousSenders.size(), billy = 0;
+        for (String previousSender : previousSenders) {
+            if (previousSender.equals("brodes"))
+                billy++;
+        }
+        if(total > 0) {
+            BigDecimal conc = new BigDecimal(((float) billy) / total * 100);
+            sendMessage(target, "Current Billium concentration: " + conc.toPlainString() + "%");
+            String status;
+            if(conc.compareTo(new BigDecimal(80)) > 0)
+                status = "!!DANGER!! OVERDOSE IMMENENT";
+            else if(conc.compareTo(new BigDecimal(50)) > 0)
+                status = "WARNING - DANGEROUS LEVELS";
+            else if(conc.compareTo(new BigDecimal(30)) > 0)
+                status = "Caution - Levels rising, but stable";
+            else
+                status = "Billium levels negligible.";
+            sendMessage(target, "Current status: " + status);
+        } else
+            sendMessage(target, "Billium levels negligible.");
+    }
+
+    private void handlePermuteCommand(String sender, String target, String[] args) {
+        if (!sender.equals("Everdras")) {
+            sendMessage(target, sender + " pls go");
+            return;
+        }
+        if (args.length != 2) {
+            sendMessage(target, "Incorrect number of args. Usage: !permute <string>");
+            return;
+        }
+        
+        String word = args[1];
+        if (word.length() > 5) {
+            sendMessage(target, "Too long, max length: 5");
+            return;
+        }
+        sendMessage(target, "Permuting...");
+        List<String> perms = permute(word);
+        sendMessage(target, "Permutations: " + perms.size());
+        long origDelay = getMessageDelay();
+        this.setMessageDelay(210);
+        List<String> output = new LinkedList<>();
+        StringBuilder b = new StringBuilder();
+        int c = 0;
+        for(String s : perms) {
+            b.append(s);
+            b.append(' ');
+            c++;
+            if(c == 8) {
+                c = 0;
+                output.add(b.toString());
+                b = new StringBuilder();
+            }
+        }
+        if(b.length() != 0)
+            output.add(b.toString());
+        for(String s : output) {
+            sendMessage(target, s);
+        }
+        this.setMessageDelay(origDelay);
     }
     
   public static List<String> permute(String s) {
@@ -284,5 +284,4 @@ public class AlphonseBot extends PircBot {
     }
     return ret;
   }
-
 }
