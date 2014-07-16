@@ -103,6 +103,7 @@ public class TTTGame {
         boolean isTaken = (board[x][y] == 'X' || board[x][y] == 'O');
         
         if(isTaken) {
+            b.append(Colors.NORMAL);
             b.append(underlined ? Colors.UNDERLINE : Colors.NORMAL);
             b.append(board[x][y]);
             b.append(Colors.NORMAL);
