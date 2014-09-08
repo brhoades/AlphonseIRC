@@ -165,13 +165,16 @@ public class AlphonseBot extends PircBot {
         System.out.println("I got disconnected!");
 
         int attempt = 0;
-        while (!isConnected()) {
+        boolean error = false;
+        while (!isConnected() || error) {
             try {
                 System.out.printf("Trying to reconnect... (Attempt %s)\n", attempt);
                 connect(server);
                 System.out.println("Reconnected.");
+                error = false;
             } catch (IOException | IrcException ex) {
                 System.err.println("Error reconnecting to " + server);
+                error = true;
             }
         }
 
