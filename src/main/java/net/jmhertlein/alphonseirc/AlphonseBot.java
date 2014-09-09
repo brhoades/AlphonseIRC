@@ -18,6 +18,11 @@ package net.jmhertlein.alphonseirc;
 
 import java.io.IOException;
 import java.math.BigDecimal;
+import java.time.Clock;
+import java.time.ZonedDateTime;
+import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeFormatterBuilder;
+import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Random;
@@ -40,10 +45,11 @@ public class AlphonseBot extends PircBot {
     private int maxXKCD;
     private boolean voicing;
     private TTTGame ttt;
+    private LinkedList<DadLeaveReport> dadLeaveTimes;
 
     private final Set<String> noVoiceNicks, masters;
 
-    public AlphonseBot(String nick, String pass, String server, List<String> channels, int maxXKCD, Set<String> noVoiceNicks, Set<String> masters) {
+    public AlphonseBot(String nick, String pass, String server, List<String> channels, int maxXKCD, Set<String> noVoiceNicks, Set<String> masters, LinkedList<DadLeaveReport> dadLeaveTimes) {
         this.pass = pass;
         this.nick = nick;
         this.channels = channels;
@@ -54,6 +60,8 @@ public class AlphonseBot extends PircBot {
         this.noVoiceNicks = noVoiceNicks;
         this.masters = masters;
         voicing = true;
+        
+        this.dadLeaveTimes = dadLeaveTimes;
 
         previousSenders = new LinkedList<>();
     }
@@ -248,6 +256,10 @@ public class AlphonseBot extends PircBot {
             case "tt":
             case "ttt":
                 handleTTTCommand(target, sender, args);
+                break;
+            case "dad":
+                handleDadCommand(target, sender, args);
+                break;
         }
     }
 
@@ -506,5 +518,65 @@ public class AlphonseBot extends PircBot {
             sendMessage(target, "Incorrect number of args. Usage: !ttt mv (<x> <y>|<label>)  where (0,0) is the top-left");
             return null;
         }
+    }
+
+    private void handleDadCommand(String target, String sender, String[] args) {
+        if(args.length == 1) {
+            sendMessage(target, "Usage: !dad [left|list|say]");
+            return;
+        }
+        
+        switch(args[1]) {
+            case "left":
+                ZonedDateTime now = ZonedDateTime.now();
+                this.dadLeaveTimes.add(new DadLeaveReport(sender));
+                sendMessage(target, "Marked dad's leave time as now (" + now.format(DateTimeFormatter.ISO_LOCAL_TIME) + ").");
+                break;
+            case "list":
+                int num = 3;
+                if(args.length == 3) {
+                    try {
+                        num = Integer.parseInt(args[2]);
+                        if(num > 10)
+                            num = 10;
+                    } catch(NumberFormatException nfe) {
+                        sendMessage(target, "Error parsing " + args[2] + " into int: " + nfe.getMessage());
+                        sendMessage(target, "Usage: !dad list (optional: number, default 3, max 10)");
+                        return;
+                    }
+                }    
+                    Iterator<DadLeaveReport> i = dadLeaveTimes.descendingIterator();
+                    for(int j = 0; j < num && i.hasNext(); j++)
+                        sendMessage(target, i.next().getTime().format(DateTimeFormatter.RFC_1123_DATE_TIME));
+                break;
+            case "say":
+                String msg;
+                switch(gen.nextInt(5)) {
+                    case 0: 
+                        msg = "TYPES LOUDLY";
+                        break;
+                    case 1:
+                        msg = "BREATHES DEEPLY";
+                        break;
+                    case 2:
+                        msg = "ANGRILY TYPES AN EMAIL";
+                        break;
+                    case 3:
+                        msg = "BACKSPACES WITH AUTHORITY";
+                        break;
+                    case 4:
+                        msg = "STRETCHES WHILE EXHALING";
+                        break;
+                    default:
+                        msg = "Someone made nextInt() go too high";
+                        break;
+                }
+                
+                this.sendAction(target, msg);
+                break;
+            default:
+                System.out.println("Bad switch on " + args[1]);
+        }
+        
     }
 }

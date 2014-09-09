@@ -28,6 +28,7 @@ import java.nio.file.attribute.PosixFilePermissions;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Scanner;
@@ -49,6 +50,7 @@ public class MSTDeskEngRunner {
     private static String nick, pass, server;
     private static List<String> channels;
     private static Set<String> noVoiceNicks, masters;
+    private static LinkedList<DadLeaveReport> dadLeaveTimes;
     private static int maxXKCD;
     private static long cachedUTC;
 
@@ -61,7 +63,7 @@ public class MSTDeskEngRunner {
 
         loadConfig();
 
-        AlphonseBot bot = new AlphonseBot(nick, pass, server, channels, maxXKCD, noVoiceNicks, masters);
+        AlphonseBot bot = new AlphonseBot(nick, pass, server, channels, maxXKCD, noVoiceNicks, masters, dadLeaveTimes);
         bot.setMessageDelay(500);
         try {
             bot.startConnection();
@@ -130,6 +132,7 @@ public class MSTDeskEngRunner {
             System.out.println("Fetched.");
             cachedUTC = System.currentTimeMillis();
             
+            dadLeaveTimes = new LinkedList<>();
             noVoiceNicks = new HashSet<>();
 
             writeConfig();
@@ -145,6 +148,7 @@ public class MSTDeskEngRunner {
                 return;
             }
 
+            
             nick = (String) config.get("nick");
             pass = (String) config.get("password");
             server = (String) config.get("server");
@@ -161,18 +165,20 @@ public class MSTDeskEngRunner {
             if(noVoiceNicks == null)
                 noVoiceNicks = new HashSet<>();
             
-            for(String s : noVoiceNicks) {
-                System.out.println("Loaded novoice nick: " + s);
-            }
-            
-            for(String s : masters) {
-                System.out.println("Loaded master nick: " + s);
-            }
+            noVoiceNicks.stream().forEach((s) -> System.out.println("Loaded novoice nick: " + s));
+            masters.stream().forEach((s) -> System.out.println("Loaded master nick: " + s));
             
             if(checkXKCDUpdate())
                 writeConfig();
             else
                 System.out.println("Loaded cached XKCD.");
+            
+            List<Map<String, Object>> serialDadLeaveTimes = (List<Map<String, Object>>) config.get("dadLeaveTimes");
+            
+            dadLeaveTimes = new LinkedList<>();
+            serialDadLeaveTimes.stream().forEach((time) -> {
+                dadLeaveTimes.add(new DadLeaveReport((String) time.get("time"), (String) time.get("reporter")));
+            });
 
         }
     }
@@ -196,6 +202,18 @@ public class MSTDeskEngRunner {
         m.put("cachedUTC", cachedUTC);
         m.put("noVoiceNicks", noVoiceNicks);
         m.put("masters", masters);
+        
+        List<Map<String, Object>> serialDadTimes = new LinkedList<>();
+        dadLeaveTimes.stream().map((r) -> {
+            Map<String, Object> temp = new HashMap<>();
+            temp.put("reporter", r.getReporter());
+            temp.put("time", r.getTime().toString());
+            return temp;
+        }).forEach((temp) -> {
+            serialDadTimes.add(temp);
+        });
+        
+        m.put("dadLeaveTimes", serialDadTimes);
 
         Yaml yaml = new Yaml();
         String yamlOutput = yaml.dump(m);
