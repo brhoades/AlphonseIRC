@@ -25,6 +25,8 @@ import java.net.MalformedURLException;
 import java.net.URL;
 import java.nio.file.Paths;
 import java.nio.file.attribute.PosixFilePermissions;
+import java.time.LocalDate;
+import java.time.LocalTime;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -50,7 +52,7 @@ public class MSTDeskEngRunner {
     private static String nick, pass, server;
     private static List<String> channels;
     private static Set<String> noVoiceNicks, masters;
-    private static LinkedList<DadLeaveReport> dadLeaveTimes;
+    private static Map<LocalDate,LocalTime> dadLeaveTimes;
     private static int maxXKCD;
     private static long cachedUTC;
 
@@ -132,7 +134,7 @@ public class MSTDeskEngRunner {
             System.out.println("Fetched.");
             cachedUTC = System.currentTimeMillis();
             
-            dadLeaveTimes = new LinkedList<>();
+            dadLeaveTimes = new HashMap<>();
             noVoiceNicks = new HashSet<>();
 
             writeConfig();
@@ -173,11 +175,11 @@ public class MSTDeskEngRunner {
             else
                 System.out.println("Loaded cached XKCD.");
             
-            List<Map<String, Object>> serialDadLeaveTimes = (List<Map<String, Object>>) config.get("dadLeaveTimes");
-            
-            dadLeaveTimes = new LinkedList<>();
-            serialDadLeaveTimes.stream().forEach((time) -> {
-                dadLeaveTimes.add(new DadLeaveReport((String) time.get("time"), (String) time.get("reporter")));
+            Map<String, Object> serialDadLeaveTimes = (Map<String, Object>) config.get("dadLeaveTimes");
+            dadLeaveTimes = new HashMap<>();
+            if(serialDadLeaveTimes != null)
+                serialDadLeaveTimes.keySet().stream().forEach((time) -> {
+                dadLeaveTimes.put(LocalDate.parse(time), LocalTime.parse((String) serialDadLeaveTimes.get(time)));
             });
 
         }
@@ -203,15 +205,10 @@ public class MSTDeskEngRunner {
         m.put("noVoiceNicks", noVoiceNicks);
         m.put("masters", masters);
         
-        List<Map<String, Object>> serialDadTimes = new LinkedList<>();
-        dadLeaveTimes.stream().map((r) -> {
-            Map<String, Object> temp = new HashMap<>();
-            temp.put("reporter", r.getReporter());
-            temp.put("time", r.getTime().toString());
-            return temp;
-        }).forEach((temp) -> {
-            serialDadTimes.add(temp);
-        });
+        Map<String, Object> serialDadTimes = new HashMap<>();
+        
+        dadLeaveTimes.keySet().stream()
+                .forEach(d -> serialDadTimes.put(d.toString(), dadLeaveTimes.get(d)));
         
         m.put("dadLeaveTimes", serialDadTimes);
 

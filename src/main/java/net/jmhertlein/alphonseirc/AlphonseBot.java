@@ -19,12 +19,15 @@ package net.jmhertlein.alphonseirc;
 import java.io.IOException;
 import java.math.BigDecimal;
 import java.time.Clock;
+import java.time.LocalDate;
+import java.time.LocalTime;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeFormatterBuilder;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Map;
 import java.util.Random;
 import java.util.Set;
 import org.apache.commons.codec.binary.Base64;
@@ -45,11 +48,11 @@ public class AlphonseBot extends PircBot {
     private int maxXKCD;
     private boolean voicing;
     private TTTGame ttt;
-    private LinkedList<DadLeaveReport> dadLeaveTimes;
+    private final Map<LocalDate, LocalTime> dadLeaveTimes;
 
     private final Set<String> noVoiceNicks, masters;
 
-    public AlphonseBot(String nick, String pass, String server, List<String> channels, int maxXKCD, Set<String> noVoiceNicks, Set<String> masters, LinkedList<DadLeaveReport> dadLeaveTimes) {
+    public AlphonseBot(String nick, String pass, String server, List<String> channels, int maxXKCD, Set<String> noVoiceNicks, Set<String> masters, Map<LocalDate, LocalTime> dadLeaveTimes) {
         this.pass = pass;
         this.nick = nick;
         this.channels = channels;
@@ -529,7 +532,7 @@ public class AlphonseBot extends PircBot {
         switch(args[1]) {
             case "left":
                 ZonedDateTime now = ZonedDateTime.now();
-                this.dadLeaveTimes.add(new DadLeaveReport(sender));
+                this.dadLeaveTimes.put(LocalDate.now(), LocalTime.now());
                 sendMessage(target, "Marked dad's leave time as now (" + now.format(DateTimeFormatter.ISO_LOCAL_TIME) + ").");
                 break;
             case "list":
@@ -544,10 +547,14 @@ public class AlphonseBot extends PircBot {
                         sendMessage(target, "Usage: !dad list (optional: number, default 3, max 10)");
                         return;
                     }
-                }    
-                    Iterator<DadLeaveReport> i = dadLeaveTimes.descendingIterator();
-                    for(int j = 0; j < num && i.hasNext(); j++)
-                        sendMessage(target, i.next().getTime().format(DateTimeFormatter.RFC_1123_DATE_TIME));
+                }
+                final int prevDays = num;
+                dadLeaveTimes.keySet().stream()
+                        .filter(date -> date.isAfter(LocalDate.now().minusDays(prevDays)))
+                        .map(date -> dadLeaveTimes.get(date))
+                        .forEach(time -> sendMessage(target, time.format(DateTimeFormatter.RFC_1123_DATE_TIME)));
+                    
+                        
                 break;
             case "say":
                 String msg;

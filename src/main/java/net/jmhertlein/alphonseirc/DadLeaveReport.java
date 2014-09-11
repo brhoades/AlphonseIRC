@@ -6,31 +6,36 @@
 
 package net.jmhertlein.alphonseirc;
 
-import java.time.ZonedDateTime;
+import java.time.LocalTime;
 
 /**
  *
  * @author joshua
  */
-public class DadLeaveReport {
-    private final ZonedDateTime time;
+public class DadLeaveReport implements Comparable<DadLeaveReport> {
+    private final LocalTime time;
     private final String reporter;
 
     public DadLeaveReport(String time, String reporter) {
-        this.time = ZonedDateTime.parse(time);
+        this.time = LocalTime.parse(time);
         this.reporter = reporter;
     }
 
     public DadLeaveReport(String reporter) {
-        this.time = ZonedDateTime.now();
+        this.time = LocalTime.now();
         this.reporter = reporter;
     }
 
-    public ZonedDateTime getTime() {
+    public LocalTime getTime() {
         return time;
     }
 
     public String getReporter() {
         return reporter;
+    }
+
+    @Override
+    public int compareTo(DadLeaveReport o) {
+        return getTime().compareTo(o.getTime());
     }
 }
