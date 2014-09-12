@@ -560,7 +560,7 @@ public class AlphonseBot extends PircBot {
                 break;
             case "say":
                 String msg;
-                switch(gen.nextInt(5)) {
+                switch(gen.nextInt(9)) {
                     case 0: 
                         msg = "TYPES LOUDLY";
                         break;
@@ -575,6 +575,18 @@ public class AlphonseBot extends PircBot {
                         break;
                     case 4:
                         msg = "STRETCHES WHILE EXHALING";
+                        break;
+                    case 5:
+                        msg = "thinks about Happy Hour";
+                        break;
+                    case 6:
+                        msg = "browses Yahoo! news";
+                        break;
+                    case 7:
+                        msg = "tells everyone to GET BACK TO WORK";
+                        break;
+                    case 8:
+                        msg = "ignores Lantzer standing in front of his desk";
                         break;
                     default:
                         msg = "Someone made nextInt() go too high";
