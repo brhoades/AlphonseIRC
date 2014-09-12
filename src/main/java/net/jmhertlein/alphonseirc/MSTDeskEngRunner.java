@@ -208,7 +208,7 @@ public class MSTDeskEngRunner {
         Map<String, Object> serialDadTimes = new HashMap<>();
         
         dadLeaveTimes.keySet().stream()
-                .forEach(d -> serialDadTimes.put(d.toString(), dadLeaveTimes.get(d)));
+                .forEach(d -> serialDadTimes.put(d.toString(), dadLeaveTimes.get(d).toString()));
         
         m.put("dadLeaveTimes", serialDadTimes);
 

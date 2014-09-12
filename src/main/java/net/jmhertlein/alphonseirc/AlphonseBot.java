@@ -523,7 +523,7 @@ public class AlphonseBot extends PircBot {
         }
     }
 
-    private void handleDadCommand(String target, String sender, String[] args) {
+    private void handleDadCommand(final String target, String sender, String[] args) {
         if(args.length == 1) {
             sendMessage(target, "Usage: !dad [left|list|say]");
             return;
@@ -548,11 +548,13 @@ public class AlphonseBot extends PircBot {
                         return;
                     }
                 }
+                
                 final int prevDays = num;
                 dadLeaveTimes.keySet().stream()
+                        .sorted()
                         .filter(date -> date.isAfter(LocalDate.now().minusDays(prevDays)))
-                        .map(date -> dadLeaveTimes.get(date))
-                        .forEach(time -> sendMessage(target, time.format(DateTimeFormatter.RFC_1123_DATE_TIME)));
+                        .map(date -> date.format(DateTimeFormatter.ISO_LOCAL_DATE) + " || " + dadLeaveTimes.get(date).format(DateTimeFormatter.ISO_LOCAL_TIME))
+                        .forEach(leaveTime -> sendMessage(target, leaveTime));
                     
                         
                 break;
