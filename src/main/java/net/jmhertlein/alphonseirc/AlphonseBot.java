@@ -595,16 +595,16 @@ public class AlphonseBot extends PircBot {
                         msg = "chews ice, open-mouthed, hungrily";
                         break;
                     case 11:
-                        msg = "makes a your mom joke again"
+                        msg = "makes a your mom joke again";
                         break;
                     case 12:
-                        msg = "pops a joint so loudly it's assumed he's dead"
+                        msg = "pops a joint so loudly it's assumed he's dead";
                         break;
                     case 13:
-                        msg = "makes some inhuman rumbling sound"
+                        msg = "makes some inhuman rumbling sound";
                         break;
                     case 14:
-                        msg = "yells at you for doing homework off the clock while he budgets for his business"
+                        msg = "yells at you for doing homework off the clock while he budgets for his business";
                         break;
                     default:
                         msg = "Someone made nextInt() go too high";
