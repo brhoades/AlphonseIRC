@@ -560,7 +560,7 @@ public class AlphonseBot extends PircBot {
                 break;
             case "say":
                 String msg;
-                switch(gen.nextInt(9)) {
+                switch(gen.nextInt(16)) {
                     case 0: 
                         msg = "TYPES LOUDLY";
                         break;
@@ -605,6 +605,9 @@ public class AlphonseBot extends PircBot {
                         break;
                     case 14:
                         msg = "yells at you for doing homework off the clock while he budgets for his business";
+                        break;
+                    case 15:
+                        msg = "PANTS HEAVILY AFTER STRETCHING";
                         break;
                     default:
                         msg = "Someone made nextInt() go too high";
